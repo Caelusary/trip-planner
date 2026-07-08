@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { login } from "@/actions/auth";
+import { SubmitButton } from "@/components/SubmitButton";
+import { authErrorMessage } from "@/lib/auth-errors";
 
 export default async function LoginPage({
   searchParams,
@@ -10,38 +12,45 @@ export default async function LoginPage({
 
   return (
     <main className="flex flex-1 items-center justify-center p-6">
-      <div className="glass-card w-full max-w-sm p-8">
-        <h1 className="mb-1 text-2xl font-semibold">🧭 Welcome back</h1>
+      <div className="glass-card enter w-full max-w-sm p-8">
+        <h1 className="font-display mb-1 text-2xl font-semibold">Welcome back</h1>
         <p className="mb-6 text-sm text-white/70">Log in to plan your next trip.</p>
 
         {error && (
-          <p className="mb-4 rounded-md border border-red-400/40 bg-red-500/20 px-3 py-2 text-sm text-red-100">
-            {error}
+          <p
+            role="alert"
+            className="border-danger-400/40 bg-danger-500/20 text-danger-300 mb-4 rounded-md border px-3 py-2 text-sm"
+          >
+            {authErrorMessage(error)}
           </p>
         )}
 
         <form action={login} className="flex flex-col gap-4">
-          <input
-            name="email"
-            type="email"
-            placeholder="Email"
-            required
-            className="glass-input px-3 py-2"
-          />
-          <input
-            name="password"
-            type="password"
-            placeholder="Password"
-            required
-            minLength={6}
-            className="glass-input px-3 py-2"
-          />
-          <button
-            type="submit"
-            className="mt-2 rounded-md bg-white/90 px-4 py-2 font-medium text-slate-900 transition hover:bg-white"
-          >
+          <label className="flex flex-col gap-1 text-xs text-white/70">
+            Email
+            <input
+              name="email"
+              type="email"
+              autoComplete="email"
+              placeholder="you@example.com"
+              required
+              className="glass-input px-3 py-2"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-white/70">
+            Password
+            <input
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              required
+              minLength={6}
+              className="glass-input px-3 py-2"
+            />
+          </label>
+          <SubmitButton pendingLabel="Logging in…" className="mt-2">
             Log in
-          </button>
+          </SubmitButton>
         </form>
 
         <p className="mt-6 text-sm text-white/70">

@@ -1,46 +1,159 @@
 @import "tailwindcss";
 
-:root {
-  --background: #1e3a5f;
-  --foreground: #f1f5f9;
+@theme {
+  /* ---------- INK (warm-cool charcoal/navy ramp, never pure black) ---------- */
+  --color-ink-950: oklch(0.16 0.02 265);
+  --color-ink-900: oklch(0.20 0.022 266);
+  --color-ink-800: oklch(0.25 0.024 267);
+  --color-ink-700: oklch(0.32 0.025 268);
+  --color-ink-500: oklch(0.58 0.02 265);
+  --color-ink-200: oklch(0.88 0.01 265);
+  --color-ink-100: oklch(0.94 0.008 265);
+  --color-ink-50: oklch(0.98 0.004 265);
+
+  /* ---------- ACCENT (ember amber — CTAs and emphasis only) ---------- */
+  --color-accent-400: oklch(0.8 0.14 60);
+  --color-accent-500: oklch(0.74 0.16 55);
+  --color-accent-600: oklch(0.64 0.16 48);
+
+  /* ---------- SEMANTIC ---------- */
+  --color-danger-300: oklch(0.82 0.08 22);
+  --color-danger-400: oklch(0.74 0.14 24);
+  --color-danger-500: oklch(0.64 0.19 25);
+
+  /* ---------- TYPE ---------- */
+  --font-display: var(--font-fraunces), Georgia, serif;
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+:root {
+  --background: var(--color-ink-950);
+  --foreground: var(--color-ink-100);
 }
 
 body {
   color: var(--foreground);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
   min-height: 100vh;
-  background: linear-gradient(135deg, #1e3a5f 0%, #3b6ea5 45%, #f2a65a 100%);
+  /* Dusk horizon: near-neutral charcoal for most of the viewport, warming
+     only at the very bottom — restraint over gradient-soup. */
+  background: linear-gradient(
+    180deg,
+    var(--color-ink-950) 0%,
+    oklch(0.19 0.03 267) 55%,
+    oklch(0.24 0.06 35) 100%
+  );
   background-attachment: fixed;
 }
 
+.font-display {
+  font-family: var(--font-display);
+}
+
 .glass-card {
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: color-mix(in oklch, white 8%, var(--color-ink-900));
+  border: 1px solid color-mix(in oklch, white 12%, var(--color-ink-900));
   border-radius: 1rem;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  box-shadow:
+    0 1px 2px oklch(0.1 0.02 265 / 0.3),
+    0 12px 32px oklch(0.1 0.02 265 / 0.35);
+}
+
+.glass-card-link {
+  transition:
+    transform 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-card-link:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in oklch, white 22%, var(--color-ink-900));
+  box-shadow:
+    0 1px 2px oklch(0.1 0.02 265 / 0.3),
+    0 16px 40px oklch(0.1 0.02 265 / 0.45);
 }
 
 .glass-input {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: color-mix(in oklch, white 6%, var(--color-ink-900));
+  border: 1px solid color-mix(in oklch, white 14%, var(--color-ink-900));
   border-radius: 0.5rem;
   color: var(--foreground);
+  /* Inputs inherit font-size from their (often text-xs) label wrappers;
+     16px keeps them legible and prevents iOS Safari's focus zoom. */
+  font-size: 1rem;
+  transition: border-color 160ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .glass-input::placeholder {
-  color: rgba(241, 245, 249, 0.6);
+  color: color-mix(in oklch, var(--color-ink-100) 60%, transparent);
 }
 
 .glass-input:focus {
   outline: none;
-  border-color: rgba(255, 255, 255, 0.6);
+  border-color: color-mix(in oklch, white 55%, var(--color-ink-900));
+  box-shadow: 0 0 0 3px color-mix(in oklch, white 18%, transparent);
+}
+
+/* Visible keyboard focus for interactive elements on the dark background. */
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid white;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* ---------- Boarding-pass ticket motif (trip list cards) ---------- */
+.ticket-stub {
+  border-right: 1px dashed color-mix(in oklch, white 22%, var(--color-ink-900));
+}
+
+/* ---------- One-shot staggered entry for lists (trips, stops, forecast) ---------- */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stagger > * {
+  animation: rise-in 480ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+.stagger > *:nth-child(1) {
+  animation-delay: 0ms;
+}
+.stagger > *:nth-child(2) {
+  animation-delay: 60ms;
+}
+.stagger > *:nth-child(3) {
+  animation-delay: 120ms;
+}
+.stagger > *:nth-child(4) {
+  animation-delay: 180ms;
+}
+.stagger > *:nth-child(n + 5) {
+  animation-delay: 240ms;
+}
+
+/* One-shot entrance for a single element (auth cards, page headers). */
+.enter {
+  animation: rise-in 480ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

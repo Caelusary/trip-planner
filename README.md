@@ -1,36 +1,45 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Trip Planner
 
-## Getting Started
+A small trip-planning app: create trips with a destination and date range, add multi-city stops, and see a 5-day weather forecast (plus weather-based suggestions) for each destination via OpenWeatherMap.
 
-First, run the development server:
+## Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- [Next.js 16](https://nextjs.org) (App Router, TypeScript, Turbopack) with React Server Components and server actions
+- [Supabase](https://supabase.com) — Postgres + auth (`@supabase/ssr` for cookie-based sessions)
+- Tailwind CSS 4
+- Deployed on [Vercel](https://vercel.com) via GitHub integration (pushes to `main` auto-deploy)
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Local setup
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Install dependencies:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+   ```bash
+   npm install
+   ```
 
-## Learn More
+2. Copy `.env.example` to `.env.local` and fill in the three variables:
 
-To learn more about Next.js, take a look at the following resources:
+   | Variable | Purpose |
+   | --- | --- |
+   | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
+   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/publishable key |
+   | `OPENWEATHER_API_KEY` | OpenWeatherMap key (server-only, no `NEXT_PUBLIC_` prefix) |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+3. Run the dev server:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+   ```bash
+   npm run dev
+   ```
 
-## Deploy on Vercel
+   Open http://localhost:3000.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Deployment (Vercel)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Repo: `Zachyy-boi/trip-planner`, branch `main` auto-deploys.
+- The same three env vars from `.env.example` must be set in the Vercel project (Settings > Environment Variables) for Production/Preview — the app 500s without them.
+- Supabase project ref: `tpjawauntyfqtdpkewgn`. The database schema (`trips`, `trip_stops`, RLS policies) lives in Supabase migrations — apply via the Supabase dashboard or CLI, not from this repo.
+
+## Known caveats
+
+- **Signup email confirmation**: Supabase's built-in email service is heavily rate-limited. New signups will stall on the confirmation email unless you either disable "Confirm email" (Supabase Dashboard > Authentication > Sign In / Providers) or configure custom SMTP.
+- **Weather data**: forecasts come from OpenWeatherMap's free tier (5-day/3-hour forecast). Dates outside that window show no forecast.
