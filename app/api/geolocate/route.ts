@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { reverseGeocodeCountry } from "@/lib/weather";
+import { clientKey, isRateLimited } from "@/lib/rate-limit";
+
+const RATE_LIMIT_PER_MINUTE = 30;
 
 export async function GET(request: NextRequest) {
+  if (isRateLimited(`geolocate:${clientKey(request)}`, RATE_LIMIT_PER_MINUTE)) {
+    return NextResponse.json({ country: null }, { status: 429 });
+  }
+
   const lat = Number(request.nextUrl.searchParams.get("lat"));
   const lon = Number(request.nextUrl.searchParams.get("lon"));
 
