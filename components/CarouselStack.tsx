@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { BudgetTier } from "@/lib/attractions";
+import { formatBudget, type Activity } from "@/lib/attractions";
 
 export interface CarouselItem {
   id: string;
@@ -13,10 +13,10 @@ export interface CarouselItem {
   image: string;
   description: string;
   rating: number;
-  budgetTier: BudgetTier;
-  budgetLabel: string;
+  budgetMin: number;
+  budgetMax: number;
   bestTime: string;
-  highlights: [string, string, string];
+  activities: Activity[];
   funFact: string;
   /** Where a tap on the primary card should navigate to. */
   href: string;
@@ -24,21 +24,18 @@ export interface CarouselItem {
 
 interface CarouselStackProps {
   items: CarouselItem[];
-  followedIds: Set<string>;
-  onToggleFollow: (id: string) => void;
+  selectedIds: Set<string>;
+  onToggleSelect: (id: string) => void;
 }
 
 const DRAG_COMMIT_PX = 90;
 const TAP_MAX_PX = 6;
-// The stack renders a small window of items around the active index instead
-// of just the primary card. Two behind: the immediately-previous card (kept
-// VISIBLE as a left-side peek, so advancing forward doesn't make the old
-// primary vanish — it slides left and settles in behind the new primary)
-// plus one further invisible pre-stage so a second backward step also
-// slides in smoothly instead of popping into existence. Symmetric on the
-// forward side: one visible peek, one dimmer visible peek, one invisible
-// pre-stage.
-const SLOTS_BEHIND = 2;
+// Symmetric window: two visible peek cards stack behind the primary card on
+// EACH side (slots ±1, ±2), plus one invisible pre-stage per side (±3) so a
+// third consecutive step in either direction slides smoothly into place
+// instead of popping into existence. The deck always reads as balanced —
+// same depth left and right — instead of favoring one direction.
+const SLOTS_BEHIND = 3;
 const SLOTS_AHEAD = 3;
 
 interface SlotStyle {
@@ -51,9 +48,16 @@ interface SlotStyle {
 
 // Every offset here is either a fixed pixel value or a percentage of the
 // card's own (fluid) box — nothing depends on a known pixel width, so this
-// works unchanged whether the card renders at 280px or 400px wide.
+// works unchanged whether the card renders at 280px or 400px wide. Positive
+// slots (ahead, to the right) and negative slots (behind, to the left) are
+// exact mirrors of each other via `side`, so the stack is always visually
+// symmetric around the primary card.
 function styleForSlot(slot: number, dragPx: number): SlotStyle {
-  if (slot === 0) {
+  const magnitude = Math.abs(slot);
+  const side = slot < 0 ? -1 : 1;
+  const corner = side < 0 ? "bottom left" : "bottom right";
+
+  if (magnitude === 0) {
     return {
       transform: `translate(${dragPx}px, 0) rotate(${dragPx / 24}deg)`,
       transformOrigin: "center",
@@ -61,55 +65,31 @@ function styleForSlot(slot: number, dragPx: number): SlotStyle {
       zIndex: 40,
     };
   }
-  if (slot === 1) {
-    // transform-origin sits at the card's own bottom-right corner, so
-    // scaling shrinks toward that corner and the translate below moves the
-    // (unshrunk) corner exactly that many pixels past the primary card's
-    // edge — the peek amount is the translate value, full stop, regardless
-    // of the card's actual rendered width.
+  if (magnitude === 1) {
     return {
-      transform: "translate(16px, 14px) scale(0.88)",
-      transformOrigin: "bottom right",
+      transform: `translate(${side * 16}px, 14px) scale(0.88)`,
+      transformOrigin: corner,
       opacity: 1,
       zIndex: 30,
     };
   }
-  if (slot === 2) {
+  if (magnitude === 2) {
+    // No dimming/blur here — every visible slot stays fully opaque and
+    // sharp so the deck reads as a continuous stack of real cards, not
+    // cards fading in and out at the edges.
     return {
-      transform: "translate(32px, 26px) scale(0.72)",
-      transformOrigin: "bottom right",
-      opacity: 0.85,
+      transform: `translate(${side * 32}px, 26px) scale(0.72)`,
+      transformOrigin: corner,
+      opacity: 1,
       zIndex: 20,
-      filter: "blur(0.5px)",
     };
   }
-  if (slot === -1) {
-    // Mirror of slot 1: the card that just receded from the primary
-    // position slides left and settles here, visibly tucked behind the new
-    // primary (lower z-index) rather than fading away.
-    return {
-      transform: "translate(-16px, 14px) scale(0.88)",
-      transformOrigin: "bottom left",
-      opacity: 1,
-      zIndex: 30,
-    };
-  }
-  if (slot === -2) {
-    // Invisible pre-stage mirroring slot 3, so a second consecutive
-    // backward step also slides in instead of popping into place.
-    return {
-      transform: "translate(-20%, 16%) scale(0.6)",
-      transformOrigin: "bottom left",
-      opacity: 0,
-      zIndex: 0,
-    };
-  }
-  // slot === 3: pre-staged one step beyond the tertiary card — fully
-  // invisible, exists only so the next forward swipe has somewhere to slide
-  // in from.
+  // magnitude === 3: pre-staged one step beyond the second peek — fully
+  // invisible, exists only so the next swipe in that direction has somewhere
+  // to slide in from instead of popping into place.
   return {
-    transform: "translate(20%, 16%) scale(0.6)",
-    transformOrigin: "bottom right",
+    transform: `translate(${side * 20}%, 16%) scale(0.6)`,
+    transformOrigin: corner,
     opacity: 0,
     zIndex: 0,
   };
@@ -128,45 +108,133 @@ function Stars({ rating }: { rating: number }) {
   );
 }
 
-// Also revealed on hover (mouse) via `group-hover`, but hover has no
-// keyboard or touch equivalent — most visitors (touch devices have no real
-// hover state; keyboard users never trigger :hover at all) could never see
-// this content otherwise. `forceOpen` is driven by an explicit, focusable
-// toggle button rendered alongside the image so the same content is always
-// reachable without a pointer.
-function HighlightsOverlay({
+// Full-screen detail view opened by the "i" info icon on any card. Instead
+// of a modal that pops/fades in over the page, this panel is laid out at
+// full-viewport size from the start and MORPHS into view: a CSS transform
+// (FLIP technique) makes it visually start out scaled/positioned to exactly
+// overlay the source card, then animates that transform back to identity —
+// so it genuinely reads as the card itself growing into the fullscreen
+// surface, not a separate dialog appearing on top of it. Closing reverses
+// the same transform, shrinking the surface back down onto the card it
+// came from before unmounting.
+function AttractionMorphView({
   item,
-  id,
-  forceOpen,
+  sourceRect,
+  onClose,
 }: {
   item: CarouselItem;
-  id: string;
-  forceOpen: boolean;
+  sourceRect: DOMRect;
+  onClose: () => void;
 }) {
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setExpanded(true));
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  function handleClose() {
+    setExpanded(false);
+    window.setTimeout(onClose, 440);
+  }
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") handleClose();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const collapsedTransform = `translate(${sourceRect.left}px, ${sourceRect.top}px) scale(${
+    sourceRect.width / window.innerWidth
+  }, ${sourceRect.height / window.innerHeight})`;
+
   return (
-    <div
-      id={id}
-      className={`absolute inset-0 z-10 flex flex-col justify-center gap-1.5 bg-gradient-to-b from-black/92 via-black/85 to-black/92 p-3 transition-opacity duration-300 ${
-        forceOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-      }`}
-    >
-      <p className="text-accent-400 text-[10px] font-semibold tracking-wide uppercase">
-        Best time · {item.bestTime}
-      </p>
-      <ul className="flex flex-col gap-1 text-[11px] leading-snug text-white/90">
-        {item.highlights.map((highlight, i) => (
-          <li key={i} className="flex gap-1.5">
-            <span className="text-accent-400 shrink-0">★</span>
-            <span className="line-clamp-1">{highlight}</span>
-          </li>
-        ))}
-      </ul>
-      <p className="mt-0.5 line-clamp-2 text-[10px] text-white/60 italic">✨ {item.funFact}</p>
+    <div className="fixed inset-0 z-[100]">
+      <div
+        className="absolute inset-0 bg-ink-950/70 backdrop-blur-sm transition-opacity"
+        style={{ opacity: expanded ? 1 : 0, transitionDuration: "460ms" }}
+        onClick={handleClose}
+        aria-hidden="true"
+      />
+      {/*
+        transform-origin pinned to the top-left so the translate/scale
+        values above map directly onto viewport coordinates — no centering
+        math needed, the collapsed transform just IS the source card's box.
+      */}
+      <div
+        className="absolute inset-0 flex flex-col overflow-y-auto bg-ink-900 shadow-2xl"
+        style={{
+          transformOrigin: "0 0",
+          transform: expanded ? "translate(0px, 0px) scale(1, 1)" : collapsedTransform,
+          borderRadius: expanded ? "0px" : "20px",
+          transition:
+            "transform 460ms cubic-bezier(0.22, 1, 0.36, 1), border-radius 460ms cubic-bezier(0.22, 1, 0.36, 1)",
+        }}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${item.name} highlights`}
+      >
+        <button
+          type="button"
+          onClick={handleClose}
+          aria-label="Close"
+          className="absolute top-4 right-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-ink-950/70 text-white shadow-lg backdrop-blur transition hover:bg-ink-800"
+          style={{
+            opacity: expanded ? 1 : 0,
+            transition: expanded ? "opacity 200ms ease 220ms" : "opacity 120ms ease",
+          }}
+        >
+          <span aria-hidden="true">✕</span>
+        </button>
+
+        <div className="relative h-64 w-full shrink-0 overflow-hidden sm:h-80">
+          <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
+          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-ink-950 to-transparent" />
+          <div className="absolute right-6 bottom-4 left-6">
+            <p className="font-display text-2xl font-semibold text-white sm:text-3xl">{item.name}</p>
+            <p className="text-accent-400/90 text-sm font-medium">
+              @{item.city}, {item.country}
+            </p>
+          </div>
+        </div>
+
+        <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 p-6">
+          <p className="text-accent-400 text-xs font-semibold tracking-wide uppercase">
+            Best time to visit · {item.bestTime}
+          </p>
+
+          <div>
+            <p className="mb-2 text-xs font-semibold tracking-wide text-white/60 uppercase">
+              Must-see activities
+            </p>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {item.activities.map((activity) => (
+                <div key={activity.name} className="overflow-hidden rounded-xl bg-white/5">
+                  <div className="h-28 w-full overflow-hidden sm:h-32">
+                    <img
+                      src={activity.image}
+                      alt={activity.name}
+                      loading="lazy"
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                  <p className="px-2.5 py-2 text-xs leading-snug text-white/90">{activity.name}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <p className="rounded-xl bg-white/5 p-4 text-sm text-white/70 italic">✨ {item.funFact}</p>
+        </div>
+      </div>
     </div>
   );
 }
 
-export function CarouselStack({ items, followedIds, onToggleFollow }: CarouselStackProps) {
+export function CarouselStack({ items, selectedIds, onToggleSelect }: CarouselStackProps) {
   const router = useRouter();
   const [index, setIndex] = useState(0);
   const [dragPx, setDragPx] = useState(0);
@@ -186,27 +254,33 @@ export function CarouselStack({ items, followedIds, onToggleFollow }: CarouselSt
   // frame is kept — intermediate positions are never visually distinct.
   const rafRef = useRef<number | null>(null);
   const pendingDragPxRef = useRef(0);
-  // Keyboard/touch-reachable equivalent of the hover-only highlights
-  // overlay: the id of the card whose overlay is pinned open via its info
-  // toggle button, or null when nothing is pinned (hover still works
-  // independently via CSS).
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  // The card whose morph view is open (plus the exact on-screen rect it
+  // should grow FROM), or null when none is. Captured at click time from
+  // the actual clicked card's DOM node, so the morph always originates from
+  // wherever the user tapped — the primary card or a peek card alike.
+  const [morph, setMorph] = useState<{ item: CarouselItem; sourceRect: DOMRect } | null>(null);
+
+  // Filtering (e.g. dragging the budget slider) changes `items` in place
+  // without remounting this component, so a previously-valid index can end
+  // up pointing past the end of a now-shorter array. Clamping here (rather
+  // than remounting on every filter tweak) is what lets the stack animate
+  // smoothly as the result set shrinks/grows instead of popping back to the
+  // first card on every keystroke or slider tick.
+  useEffect(() => {
+    setIndex((current) => Math.min(current, Math.max(items.length - 1, 0)));
+  }, [items.length]);
 
   const atStart = index === 0;
   const atEnd = index === items.length - 1;
 
   // Relative moves use a functional update so two events arriving before
   // React re-renders (e.g. a fast double-click) each advance by one step
-  // instead of both resolving against the same stale `index`. Both this and
-  // `goTo` also close any pinned-open highlights overlay so it can't stay
-  // open on a card that has scrolled out of the primary position.
+  // instead of both resolving against the same stale `index`.
   function step(delta: number) {
-    setExpandedId(null);
     setIndex((current) => Math.min(Math.max(current + delta, 0), items.length - 1));
   }
 
   function goTo(next: number) {
-    setExpandedId(null);
     setIndex(Math.min(Math.max(next, 0), items.length - 1));
   }
 
@@ -262,6 +336,7 @@ export function CarouselStack({ items, followedIds, onToggleFollow }: CarouselSt
     return range;
   }, [items, index]);
 
+
   return (
     <div className="mx-auto flex w-full flex-col items-center gap-4">
       {/*
@@ -272,16 +347,17 @@ export function CarouselStack({ items, followedIds, onToggleFollow }: CarouselSt
         page — since a plain `position: relative` element with no z-index
         does NOT contain its descendants' stacking on its own. `isolate`
         guarantees the carousel's stack can never bleed out and cover, or be
-        covered by, anything outside this box (e.g. the budget filter
-        <select> rendered above it).
+        covered by, anything outside this box (e.g. the filters rendered
+        above it).
       */}
       <div className="relative isolate mx-auto h-[29rem] w-full max-w-[22rem]">
         {visible.map(({ item, slot }) => {
           const style = styleForSlot(slot, slot === 0 ? dragPx : 0);
           // Both peek directions are interactive: clicking a left peek
-          // steps back to it, a right peek steps forward to it.
-          const interactive = slot === -1 || slot === 1 || slot === 2;
-          const following = followedIds.has(item.id);
+          // steps back to it, a right peek steps forward to it. Symmetric
+          // on both sides — up to two peeks deep either way.
+          const interactive = slot !== 0 && Math.abs(slot) <= 2;
+          const selected = selectedIds.has(item.id);
           return (
             <div
               key={item.id}
@@ -329,13 +405,13 @@ export function CarouselStack({ items, followedIds, onToggleFollow }: CarouselSt
                     View {item.name} details
                   </Link>
                 )}
-                <div className="group relative h-44 w-full shrink-0 overflow-hidden">
+                <div className="relative h-44 w-full shrink-0 overflow-hidden">
                   <img
                     src={item.image}
                     alt={item.name}
                     draggable={false}
                     // Only the primary card is ever the user's immediate
-                    // focus; the peeking cards behind/ahead of it (up to 5
+                    // focus; the peeking cards behind/ahead of it (up to 6
                     // more <img>s mounted at once) can decode/paint whenever
                     // the browser gets around to it instead of competing for
                     // bandwidth and main-thread time with the active card.
@@ -344,31 +420,29 @@ export function CarouselStack({ items, followedIds, onToggleFollow }: CarouselSt
                     className="h-full w-full select-none object-cover"
                   />
                   <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-ink-900 to-transparent" />
-                  <HighlightsOverlay
-                    item={item}
-                    id={`highlights-${item.id}`}
-                    forceOpen={expandedId === item.id}
-                  />
-                  {slot === 0 && (
-                    <button
-                      type="button"
-                      onPointerDown={(event) => event.stopPropagation()}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        setExpandedId((current) => (current === item.id ? null : item.id));
-                      }}
-                      aria-expanded={expandedId === item.id}
-                      aria-controls={`highlights-${item.id}`}
-                      aria-label={
-                        expandedId === item.id
-                          ? `Hide highlights for ${item.name}`
-                          : `Show highlights for ${item.name}`
-                      }
-                      className="absolute top-2 right-2 z-20 flex h-11 w-11 items-center justify-center rounded-full bg-ink-950/70 text-base text-white shadow-lg backdrop-blur transition hover:bg-ink-900"
-                    >
-                      <span aria-hidden="true">{expandedId === item.id ? "✕" : "ⓘ"}</span>
-                    </button>
-                  )}
+                  {/*
+                    Replaces the old hover-only overlay: a small, always-
+                    visible info affordance that opens a full detail modal
+                    on click/tap. No hidden-until-hover content — reachable
+                    identically by mouse, touch, and keyboard.
+                  */}
+                  <button
+                    type="button"
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      // Walk up to the actual card element so the morph
+                      // view knows exactly where on screen to grow from —
+                      // whichever card's icon was tapped, not just slot 0.
+                      const card = (event.currentTarget as HTMLElement).closest(".glass-card");
+                      const rect = card?.getBoundingClientRect();
+                      if (rect) setMorph({ item, sourceRect: rect });
+                    }}
+                    aria-label={`Show highlights for ${item.name}`}
+                    className="absolute top-2 right-2 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-ink-950/70 text-sm text-white shadow-lg backdrop-blur transition hover:bg-ink-900"
+                  >
+                    <span aria-hidden="true">ⓘ</span>
+                  </button>
                 </div>
 
                 <div className="flex min-h-0 flex-1 flex-col gap-1.5 p-4">
@@ -393,27 +467,33 @@ export function CarouselStack({ items, followedIds, onToggleFollow }: CarouselSt
 
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-medium text-white/80">
-                      💰 {item.budgetLabel}
+                      💰 {formatBudget(item.budgetMin, item.budgetMax)}
                     </span>
                     <span className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-medium text-white/60">
                       {item.bestTime}
                     </span>
                   </div>
 
+                  {/*
+                    Its own button, separate from the card's tap-to-navigate
+                    handler above (stopPropagation on both pointerdown and
+                    click) — tapping anywhere else on the card never adds it
+                    to the trip, only this button does.
+                  */}
                   <button
                     type="button"
                     onPointerDown={(event) => event.stopPropagation()}
                     onClick={(event) => {
                       event.stopPropagation();
-                      onToggleFollow(item.id);
+                      onToggleSelect(item.id);
                     }}
                     className={`mt-1 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                      following
+                      selected
                         ? "bg-white/10 text-white/70 hover:bg-white/15"
                         : "bg-accent-500 text-ink-950 hover:bg-accent-400"
                     }`}
                   >
-                    {following ? "Following" : "Follow"}
+                    {selected ? "Added ✓" : "Add to Trip"}
                   </button>
 
                   <p className="mt-auto line-clamp-2 text-[11px] text-white/50">{item.description}</p>
@@ -453,6 +533,10 @@ export function CarouselStack({ items, followedIds, onToggleFollow }: CarouselSt
           />
         ))}
       </div>
+
+      {morph && (
+        <AttractionMorphView item={morph.item} sourceRect={morph.sourceRect} onClose={() => setMorph(null)} />
+      )}
     </div>
   );
 }

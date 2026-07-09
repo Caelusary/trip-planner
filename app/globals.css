@@ -105,6 +105,86 @@ button:focus-visible {
   border-radius: 2px;
 }
 
+/* ---------- Dual-thumb range slider (budget filter) ---------- */
+.range-slider {
+  position: relative;
+  height: 1.25rem;
+  display: flex;
+  align-items: center;
+}
+
+.range-slider .range-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 4px;
+  border-radius: 9999px;
+  background: color-mix(in oklch, white 14%, var(--color-ink-900));
+  pointer-events: none;
+}
+
+.range-slider .range-fill {
+  position: absolute;
+  height: 4px;
+  border-radius: 9999px;
+  background: var(--color-accent-400);
+  pointer-events: none;
+}
+
+.range-slider input[type="range"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  margin: 0;
+  background: transparent;
+  pointer-events: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.range-slider input[type="range"]::-webkit-slider-runnable-track {
+  -webkit-appearance: none;
+  height: 4px;
+  background: transparent;
+}
+.range-slider input[type="range"]::-moz-range-track {
+  height: 4px;
+  background: transparent;
+  border: none;
+}
+
+.range-slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  pointer-events: auto;
+  width: 16px;
+  height: 16px;
+  margin-top: -6px;
+  border-radius: 9999px;
+  background: var(--color-accent-400);
+  border: 2px solid var(--color-ink-950);
+  box-shadow: 0 1px 4px oklch(0.1 0.02 265 / 0.5);
+  cursor: pointer;
+}
+.range-slider input[type="range"]::-moz-range-thumb {
+  pointer-events: auto;
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: var(--color-accent-400);
+  border: 2px solid var(--color-ink-950);
+  box-shadow: 0 1px 4px oklch(0.1 0.02 265 / 0.5);
+  cursor: pointer;
+}
+
+.range-slider input[type="range"]:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid white;
+  outline-offset: 2px;
+}
+.range-slider input[type="range"]:focus-visible::-moz-range-thumb {
+  outline: 2px solid white;
+  outline-offset: 2px;
+}
+
 /* ---------- Boarding-pass ticket motif (trip list cards) ---------- */
 .ticket-stub {
   border-right: 1px dashed color-mix(in oklch, white 22%, var(--color-ink-900));
