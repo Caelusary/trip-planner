@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { searchCities } from "@/lib/weather";
+import { clientKey, isRateLimited } from "@/lib/rate-limit";
 
 const MAX_QUERY_LENGTH = 100;
+// Generous enough for keystroke-driven autocomplete, tight enough to blunt scripted abuse.
+const RATE_LIMIT_PER_MINUTE = 60;
 
 export async function GET(request: NextRequest) {
+  if (isRateLimited(`geocode:${clientKey(request)}`, RATE_LIMIT_PER_MINUTE)) {
+    return NextResponse.json({ results: [] }, { status: 429 });
+  }
+
   const query = (request.nextUrl.searchParams.get("q") ?? "").trim().slice(0, MAX_QUERY_LENGTH);
 
   if (query.length < 2) {
