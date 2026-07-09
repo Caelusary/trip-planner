@@ -120,13 +120,18 @@ function Stars({ rating }: { rating: number }) {
 function AttractionMorphView({
   item,
   sourceRect,
+  triggerEl,
   onClose,
 }: {
   item: CarouselItem;
   sourceRect: DOMRect;
+  /** The element that opened this dialog — focus returns here on close. */
+  triggerEl: HTMLElement | null;
   onClose: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const raf = requestAnimationFrame(() => setExpanded(true));
@@ -138,9 +143,39 @@ function AttractionMorphView({
     window.setTimeout(onClose, 440);
   }
 
+  // This is declared aria-modal, so it must behave like one for keyboard
+  // and screen-reader users: move focus in on open, keep it inside the
+  // dialog while open (Tab/Shift+Tab wrap instead of escaping to the page
+  // behind the overlay), and hand it back to whatever opened the dialog
+  // once it unmounts.
+  useEffect(() => {
+    closeButtonRef.current?.focus();
+    return () => {
+      triggerEl?.focus();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") handleClose();
+      if (event.key === "Escape") {
+        handleClose();
+        return;
+      }
+      if (event.key !== "Tab" || !dialogRef.current) return;
+      const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -165,6 +200,7 @@ function AttractionMorphView({
         math needed, the collapsed transform just IS the source card's box.
       */}
       <div
+        ref={dialogRef}
         className="absolute inset-0 flex flex-col overflow-y-auto bg-ink-900 shadow-2xl"
         style={{
           transformOrigin: "0 0",
@@ -181,7 +217,8 @@ function AttractionMorphView({
           type="button"
           onClick={handleClose}
           aria-label="Close"
-          className="absolute top-4 right-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-ink-950/70 text-white shadow-lg backdrop-blur transition hover:bg-ink-800"
+          ref={closeButtonRef}
+          className="absolute top-4 right-4 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-ink-950/70 text-white shadow-lg backdrop-blur transition hover:bg-ink-800"
           style={{
             opacity: expanded ? 1 : 0,
             transition: expanded ? "opacity 200ms ease 220ms" : "opacity 120ms ease",
@@ -258,7 +295,11 @@ export function CarouselStack({ items, selectedIds, onToggleSelect }: CarouselSt
   // should grow FROM), or null when none is. Captured at click time from
   // the actual clicked card's DOM node, so the morph always originates from
   // wherever the user tapped — the primary card or a peek card alike.
-  const [morph, setMorph] = useState<{ item: CarouselItem; sourceRect: DOMRect } | null>(null);
+  const [morph, setMorph] = useState<{
+    item: CarouselItem;
+    sourceRect: DOMRect;
+    triggerEl: HTMLElement | null;
+  } | null>(null);
 
   // Filtering (e.g. dragging the budget slider) changes `items` in place
   // without remounting this component, so a previously-valid index can end
@@ -434,12 +475,13 @@ export function CarouselStack({ items, selectedIds, onToggleSelect }: CarouselSt
                       // Walk up to the actual card element so the morph
                       // view knows exactly where on screen to grow from —
                       // whichever card's icon was tapped, not just slot 0.
-                      const card = (event.currentTarget as HTMLElement).closest(".glass-card");
+                      const triggerEl = event.currentTarget as HTMLElement;
+                      const card = triggerEl.closest(".glass-card");
                       const rect = card?.getBoundingClientRect();
-                      if (rect) setMorph({ item, sourceRect: rect });
+                      if (rect) setMorph({ item, sourceRect: rect, triggerEl });
                     }}
                     aria-label={`Show highlights for ${item.name}`}
-                    className="absolute top-2 right-2 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-ink-950/70 text-sm text-white shadow-lg backdrop-blur transition hover:bg-ink-900"
+                    className="absolute top-2 right-2 z-20 flex h-11 w-11 items-center justify-center rounded-full bg-ink-950/70 text-sm text-white shadow-lg backdrop-blur transition hover:bg-ink-900"
                   >
                     <span aria-hidden="true">ⓘ</span>
                   </button>
@@ -525,17 +567,26 @@ export function CarouselStack({ items, selectedIds, onToggleSelect }: CarouselSt
 
       <div className="flex items-center gap-1.5">
         {items.map((item, i) => (
-          <span
+          <button
             key={item.id}
+            type="button"
+            onClick={() => goTo(i)}
+            aria-label={`Jump to ${item.name}`}
+            aria-current={i === index ? "true" : undefined}
             className={`h-1.5 rounded-full transition-all ${
-              i === index ? "bg-accent-400 w-5" : "w-1.5 bg-white/25"
+              i === index ? "bg-accent-400 w-5" : "w-1.5 bg-white/25 hover:bg-white/40"
             }`}
           />
         ))}
       </div>
 
       {morph && (
-        <AttractionMorphView item={morph.item} sourceRect={morph.sourceRect} onClose={() => setMorph(null)} />
+        <AttractionMorphView
+          item={morph.item}
+          sourceRect={morph.sourceRect}
+          triggerEl={morph.triggerEl}
+          onClose={() => setMorph(null)}
+        />
       )}
     </div>
   );
