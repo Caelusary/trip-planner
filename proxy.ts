@@ -23,9 +23,22 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getUser() throws (rather than returning { user: null }) when the
+  // request carries a stale/rotated refresh-token cookie — e.g. an old
+  // browser tab open across a token rotation. Treat that the same as
+  // "signed out" instead of letting it propagate: Next.js's edge runtime
+  // fails open on an uncaught middleware error (skipping the redirect
+  // logic below), which happened to be masked by each page's own
+  // independent auth check, but relying on that instead of handling the
+  // case on purpose just spams the error logs for a routine occurrence.
+  let user: Awaited<ReturnType<typeof supabase.auth.getUser>>["data"]["user"] = null;
+  try {
+    ({
+      data: { user },
+    } = await supabase.auth.getUser());
+  } catch {
+    user = null;
+  }
 
   const pathname = request.nextUrl.pathname;
   const isAuthPage = pathname.startsWith("/login") || pathname.startsWith("/signup");
