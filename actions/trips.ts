@@ -4,40 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { geocodeCity } from "@/lib/weather";
-
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-const MAX_TEXT_LENGTH = 200;
-const MAX_NOTES_LENGTH = 2000;
-
-function requireText(value: FormDataEntryValue | null, field: string): string {
-  if (typeof value !== "string") throw new Error(`Invalid ${field}.`);
-  const trimmed = value.trim();
-  if (!trimmed || trimmed.length > MAX_TEXT_LENGTH) {
-    throw new Error(`Invalid ${field}.`);
-  }
-  return trimmed;
-}
-
-function requireDate(value: FormDataEntryValue | null, field: string): string {
-  if (typeof value !== "string" || !DATE_RE.test(value) || Number.isNaN(Date.parse(value))) {
-    throw new Error(`Invalid ${field}.`);
-  }
-  return value;
-}
-
-function optionalDate(value: FormDataEntryValue | null, field: string): string | null {
-  if (value == null || value === "") return null;
-  return requireDate(value, field);
-}
-
-function requireUuid(value: string, field: string): string {
-  if (typeof value !== "string" || !UUID_RE.test(value)) {
-    throw new Error(`Invalid ${field}.`);
-  }
-  return value;
-}
+import { MAX_NOTES_LENGTH, optionalDate, requireDate, requireText, requireUuid } from "@/lib/validation";
 
 async function requireUser(supabase: Awaited<ReturnType<typeof createClient>>) {
   const {
@@ -95,13 +62,8 @@ export async function deleteTrip(tripId: string) {
   requireUuid(tripId, "trip id");
   await requireTripOwnership(supabase, tripId, user.id);
 
-  // Delete stops first: there's no migration in this repo to confirm an
-  // ON DELETE CASCADE foreign key exists between trip_stops and trips, so
-  // without this the trip disappears from the UI but its stops become
-  // permanently orphaned rows with no trip to attach to.
-  const { error: stopsError } = await supabase.from("trip_stops").delete().eq("trip_id", tripId);
-  if (stopsError) throw new Error(stopsError.message);
-
+  // trip_stops.trip_id has ON DELETE CASCADE (confirmed via pg_constraint),
+  // so deleting the trip removes its stops automatically.
   const { error } = await supabase
     .from("trips")
     .delete()
@@ -133,24 +95,19 @@ export async function addStop(tripId: string, formData: FormData) {
 
   const geo = await geocodeCity(city);
 
-  const { data: existingStops } = await supabase
-    .from("trip_stops")
-    .select("position")
-    .eq("trip_id", tripId)
-    .order("position", { ascending: false })
-    .limit(1);
-
-  const nextPosition = (existingStops?.[0]?.position ?? -1) + 1;
-
-  const { error } = await supabase.from("trip_stops").insert({
-    trip_id: tripId,
-    city: geo?.label ?? city,
-    lat: geo?.lat ?? null,
-    lon: geo?.lon ?? null,
-    arrival_date: arrivalDate,
-    departure_date: departureDate,
-    notes,
-    position: nextPosition,
+  // Atomic RPC (see migration add_trip_stop_atomic_position): computing
+  // max(position)+1 and inserting used to be two separate round trips, so
+  // two concurrent "add stop" submissions for the same trip could land on
+  // the same position. The DB function retries under a unique constraint
+  // instead.
+  const { error } = await supabase.rpc("add_trip_stop", {
+    p_trip_id: tripId,
+    p_city: geo?.label ?? city,
+    p_lat: geo?.lat ?? null,
+    p_lon: geo?.lon ?? null,
+    p_arrival_date: arrivalDate,
+    p_departure_date: departureDate,
+    p_notes: notes,
   });
 
   if (error) throw new Error(error.message);
