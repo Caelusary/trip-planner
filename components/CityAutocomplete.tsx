@@ -115,6 +115,9 @@ export function CityAutocomplete({
         aria-expanded={open}
         aria-autocomplete="list"
         aria-controls={listboxId}
+        aria-activedescendant={
+          open && activeIndex >= 0 ? `${listboxId}-option-${activeIndex}` : undefined
+        }
         className={className}
       />
       {open && suggestions.length > 0 && (
@@ -126,6 +129,7 @@ export function CityAutocomplete({
           {suggestions.map((suggestion, index) => (
             <li
               key={`${suggestion.label}-${suggestion.lat}-${suggestion.lon}`}
+              id={`${listboxId}-option-${index}`}
               role="option"
               aria-selected={index === activeIndex}
               onMouseDown={(event) => {
