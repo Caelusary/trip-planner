@@ -27,7 +27,7 @@ export function DeleteTripButton({ tripName, action }: DeleteTripButtonProps) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-md border border-danger-400/40 px-3 py-1.5 text-sm text-danger-300 transition hover:bg-danger-500/20"
+        className="inline-flex min-h-11 items-center justify-center rounded-md border border-danger-400/40 px-3 py-1.5 text-sm text-danger-300 transition hover:bg-danger-500/20"
       >
         Delete trip
       </button>
