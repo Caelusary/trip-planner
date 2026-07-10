@@ -252,7 +252,18 @@ function AttractionMorphView({
             transition: expanded ? "opacity 200ms ease 220ms" : "opacity 120ms ease",
           }}
         >
-          <span aria-hidden="true">✕</span>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            aria-hidden="true"
+          >
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
         </button>
 
         <div className="relative h-64 w-full shrink-0 overflow-hidden sm:h-80">
@@ -292,7 +303,12 @@ function AttractionMorphView({
             </div>
           </div>
 
-          <p className="rounded-xl bg-white/5 p-4 text-sm text-white/70 italic">✨ {item.funFact}</p>
+          <div className="rounded-xl bg-white/5 p-4">
+            <p className="mb-1 text-xs font-semibold tracking-wide text-white/60 uppercase">
+              Fun fact
+            </p>
+            <p className="text-sm text-white/70 italic">{item.funFact}</p>
+          </div>
         </div>
       </div>
     </div>
@@ -499,9 +515,23 @@ export function CarouselStack({ items, selectedIds, onToggleSelect }: CarouselSt
                       if (rect) setMorph({ item, sourceRect: rect, triggerEl });
                     }}
                     aria-label={`Show highlights for ${item.name}`}
-                    className="absolute top-2 right-2 z-20 flex h-11 w-11 items-center justify-center rounded-full bg-ink-950/70 text-sm text-white shadow-lg backdrop-blur transition hover:bg-ink-900"
+                    className="absolute top-2 right-2 z-20 flex h-11 w-11 items-center justify-center rounded-full bg-ink-950/70 text-white shadow-lg backdrop-blur transition hover:bg-ink-900"
                   >
-                    <span aria-hidden="true">ⓘ</span>
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <circle cx="12" cy="12" r="9" />
+                      <path d="M12 11v5.5" />
+                      <circle cx="12" cy="7.75" r="0.75" fill="currentColor" stroke="none" />
+                    </svg>
                   </button>
                 </div>
 
@@ -527,7 +557,7 @@ export function CarouselStack({ items, selectedIds, onToggleSelect }: CarouselSt
 
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-medium text-white/80">
-                      💰 {formatBudget(item.budgetMin, item.budgetMax)}
+                      {formatBudget(item.budgetMin, item.budgetMax)}
                     </span>
                     <span className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-medium text-white/60">
                       {item.bestTime}
@@ -551,7 +581,7 @@ export function CarouselStack({ items, selectedIds, onToggleSelect }: CarouselSt
                       // back off shouldn't yank the user down the page.
                       if (!selected) router.push(item.href);
                     }}
-                    className={`mt-1 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                    className={`relative mt-1 rounded-full px-3 py-1.5 text-xs font-semibold transition before:absolute before:-inset-y-2 before:inset-x-0 before:content-[''] ${
                       selected
                         ? "bg-white/10 text-white/70 hover:bg-white/15"
                         : "bg-accent-500 text-ink-950 hover:bg-accent-400"
@@ -587,18 +617,29 @@ export function CarouselStack({ items, selectedIds, onToggleSelect }: CarouselSt
         </button>
       </div>
 
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-2">
         {items.map((item, i) => (
+          // The button itself is a real 24px (WCAG AA minimum) flex item —
+          // not just the tiny visual dot — so the tap target is comfortably
+          // larger than what's drawn. The dot stays visually small via the
+          // nested span; sizing the hit area with real layout (padding/gap)
+          // rather than a negative-margin hit-slop avoids adjacent dots'
+          // enlarged tap areas overlapping and stealing each other's taps.
           <button
             key={item.id}
             type="button"
             onClick={() => goTo(i)}
             aria-label={`Jump to ${item.name}`}
             aria-current={i === index ? "true" : undefined}
-            className={`h-1.5 rounded-full transition-all ${
-              i === index ? "bg-accent-400 w-5" : "w-1.5 bg-white/25 hover:bg-white/40"
-            }`}
-          />
+            className="group flex h-6 w-6 shrink-0 items-center justify-center"
+          >
+            <span
+              aria-hidden="true"
+              className={`h-1.5 rounded-full transition-all ${
+                i === index ? "bg-accent-400 w-5" : "w-1.5 bg-white/25 group-hover:bg-white/40"
+              }`}
+            />
+          </button>
         ))}
       </div>
 
