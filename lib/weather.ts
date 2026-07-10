@@ -6,7 +6,7 @@ const GEO_URL = "https://api.openweathermap.org/geo/1.0/direct";
 const REVERSE_GEO_URL = "https://api.openweathermap.org/geo/1.0/reverse";
 const FORECAST_URL = "https://api.openweathermap.org/data/2.5/forecast";
 
-export interface GeoResult {
+interface GeoResult {
   label: string;
   lat: number;
   lon: number;
