@@ -170,6 +170,37 @@ describe("geocodeCity", () => {
     vi.stubGlobal("fetch", vi.fn(async () => jsonResponse({ cod: 401 }, false)));
     expect(await geocodeCity("Austin")).toBeNull();
   });
+
+  it("scopes a bare country name to its ISO country code instead of matching a same-named locality elsewhere", async () => {
+    // Regression test for a real bug: geocoding the bare country name
+    // "Japan" (as typed for a trip destination) matched an unrelated town
+    // called Japan in Pennsylvania, US, instead of anywhere in Japan.
+    const fetchSpy = vi.fn(async (_url: string) => jsonResponse([]));
+    vi.stubGlobal("fetch", fetchSpy);
+
+    expect(await geocodeCity("Japan")).toBeNull();
+    // The request must be scoped to the JP country code, not the bare name
+    // (which is what let the Pennsylvania locality win in the first place).
+    expect(fetchSpy.mock.calls[0][0]).toContain(encodeURIComponent("Japan,JP"));
+  });
+
+  it("is case-insensitive when matching a bare country name", async () => {
+    const fetchSpy = vi.fn(async (_url: string) => jsonResponse([]));
+    vi.stubGlobal("fetch", fetchSpy);
+
+    await geocodeCity("japan");
+    expect(fetchSpy.mock.calls[0][0]).toContain(encodeURIComponent("japan,JP"));
+  });
+
+  it("does not scope a query that merely contains a country name as part of a longer string", async () => {
+    const fetchSpy = vi.fn(async (_url: string) =>
+      jsonResponse([{ name: "Tokyo", country: "JP", lat: 35.68, lon: 139.65 }]),
+    );
+    vi.stubGlobal("fetch", fetchSpy);
+
+    await geocodeCity("Tokyo, Japan");
+    expect(fetchSpy.mock.calls[0][0]).not.toContain(",JP");
+  });
 });
 
 describe("searchCities", () => {
