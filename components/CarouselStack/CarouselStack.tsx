@@ -155,7 +155,14 @@ export function CarouselStack({ items, selectedIds, onToggleSelect }: CarouselSt
         covered by, anything outside this box (e.g. the filters rendered
         above it).
       */}
-      <div className="relative isolate mx-auto h-[29rem] w-full max-w-3xl [container-type:inline-size]">
+      <div
+        className= "relative isolate mx-auto h-[29rem] w-full max-w-3xl [container-type:inline-size]"
+        tabIndex={0}
+        onKeyDown={(event) => {
+          if(event.key === "ArrowLeft") step(-1);
+          if(event.key === "ArrowRight") step(1);
+        }}
+        >
         {visible.map(({ item, slot }) => {
           const style = styleForSlot(slot, slot === 0 ? dragPx : 0);
           // Both peek directions are interactive: clicking a left peek
