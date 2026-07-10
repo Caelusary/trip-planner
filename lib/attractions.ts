@@ -1,3 +1,5 @@
+import { ATTRACTION_IMAGES } from "./attraction-images";
+
 export interface Activity {
   name: string;
   image: string;
@@ -105,7 +107,10 @@ type RawAttraction = Omit<Attraction, "image" | "activities"> & {
 function withImage(raw: RawAttraction): Attraction {
   return {
     ...raw,
-    image: `https://picsum.photos/seed/${raw.id}/480/320`,
+    // A real photo of the actual place (see lib/attraction-images.ts) — falls
+    // back to a random placeholder only for an id that somehow isn't in the
+    // generated map, which shouldn't happen for any current attraction.
+    image: ATTRACTION_IMAGES[raw.id] ?? `https://picsum.photos/seed/${raw.id}/480/320`,
     activities: raw.activities.map((name, i) => ({
       name,
       image: `https://picsum.photos/seed/${raw.id}-act-${i}/640/480`,
