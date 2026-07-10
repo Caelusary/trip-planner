@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatBudget, type Activity } from "@/lib/attractions";
 
@@ -30,13 +29,24 @@ interface CarouselStackProps {
 
 const DRAG_COMMIT_PX = 90;
 const TAP_MAX_PX = 6;
-// Symmetric window: two visible peek cards stack behind the primary card on
-// EACH side (slots ±1, ±2), plus one invisible pre-stage per side (±3) so a
-// third consecutive step in either direction slides smoothly into place
-// instead of popping into existence. The deck always reads as balanced —
-// same depth left and right — instead of favoring one direction.
-const SLOTS_BEHIND = 3;
-const SLOTS_AHEAD = 3;
+// The primary card keeps a fixed max width (22rem, see `max-w-[22rem]` on
+// each card below) while the stage around it is now much wider (matches the
+// page's max-w-3xl content column), so there's real room for peek cards to
+// spread out horizontally instead of huddling right behind the primary
+// card's edges.
+//
+// Symmetric window: THREE visible peek cards now stack behind the primary
+// card on EACH side (slots ±1, ±2, ±3 — up from two), plus one invisible
+// pre-stage per side (±4) so a fourth consecutive step in either direction
+// slides smoothly into place instead of popping into existence. The deck
+// always reads as balanced — same depth left and right — instead of
+// favoring one direction.
+const SLOTS_BEHIND = 4;
+const SLOTS_AHEAD = 4;
+// Primary card width stays capped at 22rem (see the `max-w-[22rem]` on each
+// card below) — fixed, not fluid to the (much wider) stage — so widening
+// the stage spreads the peeking cards apart instead of stretching the front
+// card itself into an oversized landscape shape.
 
 interface SlotStyle {
   transform: string;
@@ -46,11 +56,18 @@ interface SlotStyle {
   filter?: string;
 }
 
-// Every offset here is either a fixed pixel value or a percentage of the
-// card's own (fluid) box — nothing depends on a known pixel width, so this
-// works unchanged whether the card renders at 280px or 400px wide. Positive
-// slots (ahead, to the right) and negative slots (behind, to the left) are
-// exact mirrors of each other via `side`, so the stack is always visually
+// Every card sits at `left: 50%` of the (wide) stage and is re-centered via
+// the `translate(-50%, ...)` baked into every branch below; the horizontal
+// offset added on top of that is what spreads each slot out from the
+// primary card. That offset is expressed in `cqw` (percent of the STAGE's
+// own current width, via the `container-type: inline-size` set on the
+// stage element below) rather than a fixed px value — so the spread scales
+// down proportionally on a narrow phone-width stage instead of staying a
+// fixed pixel distance and overflowing past a much narrower box. The cqw
+// values below are tuned so they land at the same pixel spread (~64/126/
+// 182/224px) at the stage's full max-w-3xl (768px) width. Positive slots
+// (ahead, to the right) and negative slots (behind, to the left) are exact
+// mirrors of each other via `side`, so the stack is always visually
 // symmetric around the primary card.
 function styleForSlot(slot: number, dragPx: number): SlotStyle {
   const magnitude = Math.abs(slot);
@@ -59,7 +76,7 @@ function styleForSlot(slot: number, dragPx: number): SlotStyle {
 
   if (magnitude === 0) {
     return {
-      transform: `translate(${dragPx}px, 0) rotate(${dragPx / 24}deg)`,
+      transform: `translate(calc(-50% + ${dragPx}px), 0) rotate(${dragPx / 24}deg)`,
       transformOrigin: "center",
       opacity: 1,
       zIndex: 40,
@@ -67,7 +84,7 @@ function styleForSlot(slot: number, dragPx: number): SlotStyle {
   }
   if (magnitude === 1) {
     return {
-      transform: `translate(${side * 16}px, 14px) scale(0.88)`,
+      transform: `translate(calc(-50% + ${side * 8.3}cqw), 16px) scale(0.9)`,
       transformOrigin: corner,
       opacity: 1,
       zIndex: 30,
@@ -78,17 +95,28 @@ function styleForSlot(slot: number, dragPx: number): SlotStyle {
     // sharp so the deck reads as a continuous stack of real cards, not
     // cards fading in and out at the edges.
     return {
-      transform: `translate(${side * 32}px, 26px) scale(0.72)`,
+      transform: `translate(calc(-50% + ${side * 16.4}cqw), 30px) scale(0.78)`,
       transformOrigin: corner,
       opacity: 1,
       zIndex: 20,
     };
   }
-  // magnitude === 3: pre-staged one step beyond the second peek — fully
+  if (magnitude === 3) {
+    // Third peek, newly visible now that the stage is wide enough to show
+    // it without crowding the primary card — same fully-opaque treatment
+    // as slots 1 and 2 so the extra depth reads as more stack, not a fade.
+    return {
+      transform: `translate(calc(-50% + ${side * 23.7}cqw), 42px) scale(0.66)`,
+      transformOrigin: corner,
+      opacity: 1,
+      zIndex: 10,
+    };
+  }
+  // magnitude === 4: pre-staged one step beyond the third peek — fully
   // invisible, exists only so the next swipe in that direction has somewhere
   // to slide in from instead of popping into place.
   return {
-    transform: `translate(${side * 20}%, 16%) scale(0.6)`,
+    transform: `translate(calc(-50% + ${side * 29}cqw), 52px) scale(0.56)`,
     transformOrigin: corner,
     opacity: 0,
     zIndex: 0,
@@ -307,9 +335,11 @@ export function CarouselStack({ items, selectedIds, onToggleSelect }: CarouselSt
   // than remounting on every filter tweak) is what lets the stack animate
   // smoothly as the result set shrinks/grows instead of popping back to the
   // first card on every keystroke or slider tick.
-  useEffect(() => {
+  const [syncedItemsLength, setSyncedItemsLength] = useState(items.length);
+  if (syncedItemsLength !== items.length) {
+    setSyncedItemsLength(items.length);
     setIndex((current) => Math.min(current, Math.max(items.length - 1, 0)));
-  }, [items.length]);
+  }
 
   const atStart = index === 0;
   const atEnd = index === items.length - 1;
@@ -361,7 +391,11 @@ export function CarouselStack({ items, selectedIds, onToggleSelect }: CarouselSt
     setDragPx(0);
 
     if (Math.abs(delta) < TAP_MAX_PX) {
-      router.push(items[index].href);
+      // Tapping the card itself just... does nothing further (it's already
+      // showing everything at a glance); it no longer jumps to the plan-a-
+      // trip form. That jump-and-autofill now only happens from "Add to
+      // Trip" below, which is the actual point where the user has expressed
+      // intent to plan a trip here.
       return;
     }
     if (delta <= -DRAG_COMMIT_PX && !atEnd) step(1);
@@ -391,18 +425,18 @@ export function CarouselStack({ items, selectedIds, onToggleSelect }: CarouselSt
         covered by, anything outside this box (e.g. the filters rendered
         above it).
       */}
-      <div className="relative isolate mx-auto h-[29rem] w-full max-w-[22rem]">
+      <div className="relative isolate mx-auto h-[29rem] w-full max-w-3xl [container-type:inline-size]">
         {visible.map(({ item, slot }) => {
           const style = styleForSlot(slot, slot === 0 ? dragPx : 0);
           // Both peek directions are interactive: clicking a left peek
           // steps back to it, a right peek steps forward to it. Symmetric
-          // on both sides — up to two peeks deep either way.
-          const interactive = slot !== 0 && Math.abs(slot) <= 2;
+          // on both sides — up to three peeks deep either way.
+          const interactive = slot !== 0 && Math.abs(slot) <= 3;
           const selected = selectedIds.has(item.id);
           return (
             <div
               key={item.id}
-              className="absolute inset-0 will-change-transform"
+              className="absolute top-0 left-1/2 h-full w-full max-w-[22rem] will-change-transform"
               style={{
                 transform: style.transform,
                 transformOrigin: style.transformOrigin,
@@ -430,22 +464,6 @@ export function CarouselStack({ items, selectedIds, onToggleSelect }: CarouselSt
                   slot === 0 ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"
                 }`}
               >
-                {/*
-                  Pointer/touch users navigate to this destination by
-                  tapping the card (handled by the pointerdown/up handlers
-                  above). That gesture has no keyboard equivalent, so this
-                  visually-hidden link gives keyboard users the same
-                  destination — normally off-screen, it appears in place
-                  when tabbed to.
-                */}
-                {slot === 0 && (
-                  <Link
-                    href={item.href}
-                    className="sr-only focus-visible:not-sr-only focus-visible:absolute focus-visible:top-2 focus-visible:left-2 focus-visible:z-30 focus-visible:rounded-md focus-visible:bg-accent-500 focus-visible:px-3 focus-visible:py-1.5 focus-visible:text-xs focus-visible:font-semibold focus-visible:text-ink-950 focus-visible:shadow-lg"
-                  >
-                    View {item.name} details
-                  </Link>
-                )}
                 <div className="relative h-44 w-full shrink-0 overflow-hidden">
                   <img
                     src={item.image}
@@ -528,6 +546,10 @@ export function CarouselStack({ items, selectedIds, onToggleSelect }: CarouselSt
                     onClick={(event) => {
                       event.stopPropagation();
                       onToggleSelect(item.id);
+                      // Only jump to (and autofill) the plan-a-trip form when
+                      // this add is what expressed that intent — toggling
+                      // back off shouldn't yank the user down the page.
+                      if (!selected) router.push(item.href);
                     }}
                     className={`mt-1 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
                       selected
