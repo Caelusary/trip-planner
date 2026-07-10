@@ -20,7 +20,14 @@ export function requireText(value: FormDataEntryValue | null, field: string): st
 }
 
 export function requireDate(value: FormDataEntryValue | null, field: string): string {
-  if (typeof value !== "string" || !DATE_RE.test(value) || Number.isNaN(Date.parse(value))) {
+  if (typeof value !== "string" || !DATE_RE.test(value)) {
+    throw new Error(`Invalid ${field}.`);
+  }
+  const parsed = new Date(value);
+  // Date.parse silently normalizes calendar overflow (e.g. "2026-02-30" becomes
+  // March 2) instead of rejecting it, so round-trip the parsed date back to
+  // YYYY-MM-DD and require it to match the input exactly.
+  if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== value) {
     throw new Error(`Invalid ${field}.`);
   }
   return value;
