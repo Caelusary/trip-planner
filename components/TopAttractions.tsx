@@ -19,12 +19,20 @@ interface BudgetRangeUSD {
 }
 
 export function TopAttractions() {
-  const { country: detectedCountry, detecting } = useUserCountry();
+  const { country: detectedCountry, detecting, supported: geolocationSupported, detect } =
+    useUserCountry();
   // Once the user picks a country from the dropdown it sticks, overriding
   // whatever geolocation resolves to (or already resolved to). Until then,
   // the carousel tracks the detected country live.
   const [manualCountry, setManualCountry] = useState<CountryCode | null>(null);
   const country = manualCountry ?? detectedCountry;
+
+  function handleDetectClick() {
+    // "Use my location" should win over any earlier manual pick, so clear
+    // it first — otherwise a resolved detection would silently be ignored.
+    setManualCountry(null);
+    detect();
+  }
 
   const allAttractions = attractionsFor(country);
 
@@ -36,20 +44,29 @@ export function TopAttractions() {
 
   // The committed budget filter, always in USD regardless of which currency
   // BudgetFilter is currently displaying — resets to the full dataset range
-  // whenever the country (and therefore the dataset) changes.
+  // whenever the country (and therefore the dataset) changes. Comparing
+  // during render rather than in an effect avoids a one-frame flash of the
+  // previous country's budget bounds before the reset lands.
   const [valueUSD, setValueUSD] = useState<BudgetRangeUSD>(datasetRangeUSD);
-  useEffect(() => {
+  const [syncedRangeUSD, setSyncedRangeUSD] = useState(datasetRangeUSD);
+  if (syncedRangeUSD !== datasetRangeUSD) {
+    setSyncedRangeUSD(datasetRangeUSD);
     setValueUSD(datasetRangeUSD);
-  }, [datasetRangeUSD]);
+  }
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   // Read any previously-saved "My Trip" selections after mount only — doing
   // this in the initializer would read localStorage during server-side
   // rendering (where it doesn't exist) and mismatch the client's first
-  // render, which React would flag as a hydration error.
+  // render, which React would flag as a hydration error. This is exactly
+  // the "read an external system once after mount" case an effect is for;
+  // deriving it instead (e.g. useSyncExternalStore) would need its own
+  // change-notification plumbing to stay in sync with the write effect
+  // below, which is more moving parts than a one-time hydration read needs.
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(TRIP_STORAGE_KEY);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (raw) setSelectedIds(new Set(JSON.parse(raw)));
     } catch {
       // Corrupt or inaccessible storage — start from an empty trip list.
@@ -102,7 +119,7 @@ export function TopAttractions() {
         <h2 className="font-display text-lg font-semibold">
           Top Attractions in {COUNTRY_NAMES[country]}
         </h2>
-        {manualCountry === null && detecting && (
+        {detecting ? (
           <span
             className="flex shrink-0 items-center gap-1.5 text-[11px] text-white/50"
             aria-live="polite"
@@ -113,6 +130,16 @@ export function TopAttractions() {
             />
             Detecting…
           </span>
+        ) : (
+          geolocationSupported && (
+            <button
+              type="button"
+              onClick={handleDetectClick}
+              className="text-accent-400 shrink-0 text-[11px] font-medium underline-offset-2 hover:underline"
+            >
+              Use my location
+            </button>
+          )
         )}
       </div>
 
