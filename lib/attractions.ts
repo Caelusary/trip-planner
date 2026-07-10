@@ -727,7 +727,7 @@ const RAW_ATTRACTIONS: Record<CountryCode, RawAttraction[]> = {
   ],
 };
 
-export const ATTRACTIONS_BY_COUNTRY: Record<CountryCode, Attraction[]> = Object.fromEntries(
+const ATTRACTIONS_BY_COUNTRY: Record<CountryCode, Attraction[]> = Object.fromEntries(
   (Object.entries(RAW_ATTRACTIONS) as [CountryCode, RawAttraction[]][]).map(([code, raw]) => [
     code,
     raw.map(withImage),
