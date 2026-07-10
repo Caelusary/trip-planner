@@ -1,4 +1,5 @@
 import { ATTRACTION_IMAGES } from "./attraction-images";
+import { ACTIVITY_IMAGES } from "./activity-images";
 
 export interface Activity {
   name: string;
@@ -105,15 +106,20 @@ type RawAttraction = Omit<Attraction, "image" | "activities"> & {
 };
 
 function withImage(raw: RawAttraction): Attraction {
+  const attractionImage =
+    ATTRACTION_IMAGES[raw.id] ?? `https://picsum.photos/seed/${raw.id}/480/320`;
   return {
     ...raw,
     // A real photo of the actual place (see lib/attraction-images.ts) — falls
     // back to a random placeholder only for an id that somehow isn't in the
     // generated map, which shouldn't happen for any current attraction.
-    image: ATTRACTION_IMAGES[raw.id] ?? `https://picsum.photos/seed/${raw.id}/480/320`,
+    image: attractionImage,
     activities: raw.activities.map((name, i) => ({
       name,
-      image: `https://picsum.photos/seed/${raw.id}-act-${i}/640/480`,
+      // A real, verified-relevant photo where one could be confidently
+      // resolved (see lib/activity-images.ts); otherwise the parent
+      // attraction's own real photo — never a random placeholder.
+      image: ACTIVITY_IMAGES[`${raw.id}-act-${i}`] ?? attractionImage,
     })),
   };
 }
