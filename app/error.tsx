@@ -33,7 +33,7 @@ export default function RootError({
         <button
           type="button"
           onClick={reset}
-          className="rounded-md border border-white/30 px-3 py-1.5 text-sm text-white/90 transition hover:bg-white/10"
+          className="inline-flex min-h-11 items-center justify-center rounded-md border border-white/30 px-3 py-1.5 text-sm text-white/90 transition hover:bg-white/10"
         >
           Try again
         </button>
