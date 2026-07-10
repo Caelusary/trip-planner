@@ -23,6 +23,18 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  images: {
+    // The only two external image hosts the app ever renders: real
+    // attraction/activity photos (lib/activity-images.ts,
+    // lib/attraction-images.ts) come from Wikimedia Commons, and
+    // lib/attractions.ts falls back to a picsum.photos placeholder for any
+    // attraction id that isn't in the generated photo map. Paths are
+    // per-id/dynamic, so only the hostnames are pinned here.
+    remotePatterns: [
+      { protocol: "https", hostname: "upload.wikimedia.org" },
+      { protocol: "https", hostname: "picsum.photos" },
+    ],
+  },
   async headers() {
     return [
       {
