@@ -7,7 +7,7 @@
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-export const MAX_TEXT_LENGTH = 200;
+const MAX_TEXT_LENGTH = 200;
 export const MAX_NOTES_LENGTH = 2000;
 
 export function requireText(value: FormDataEntryValue | null, field: string): string {
