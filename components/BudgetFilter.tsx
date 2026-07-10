@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useId, useState } from "react";
 import { CURRENCIES, currencySymbol, fromUSD, toUSD, type CurrencyCode } from "@/lib/currency";
 
 interface BudgetRangeUSD {
@@ -81,12 +81,23 @@ export function BudgetFilter({
   // commit from typing round-trips back to the same number, so this never
   // fights the user mid-keystroke; it only ever corrects the display after
   // an external change or snaps back after an invalid entry is abandoned.
-  useEffect(() => {
+  // Comparing during render (rather than in an effect) applies the
+  // correction before paint instead of one frame after it.
+  const [mirrored, setMirrored] = useState({
+    min: sliderMinDisplay,
+    max: sliderMaxDisplay,
+    currency,
+  });
+  if (
+    mirrored.min !== sliderMinDisplay ||
+    mirrored.max !== sliderMaxDisplay ||
+    mirrored.currency !== currency
+  ) {
+    setMirrored({ min: sliderMinDisplay, max: sliderMaxDisplay, currency });
     setMinText(String(sliderMinDisplay));
     setMaxText(String(sliderMaxDisplay));
     setError(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sliderMinDisplay, sliderMaxDisplay, currency]);
+  }
 
   function commitUSD(nextMinUSD: number, nextMaxUSD: number) {
     if (nextMinUSD < 0 || nextMaxUSD < 0) {
