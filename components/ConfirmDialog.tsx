@@ -90,7 +90,7 @@ export function ConfirmDialog({
             type="button"
             onClick={onCancel}
             disabled={pending}
-            className="rounded-md border border-white/30 px-3 py-1.5 text-sm text-white/90 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex min-h-11 items-center justify-center rounded-md border border-white/30 px-3 py-1.5 text-sm text-white/90 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Cancel
           </button>
@@ -100,7 +100,7 @@ export function ConfirmDialog({
             onClick={onConfirm}
             disabled={pending}
             aria-busy={pending}
-            className="rounded-md border border-danger-400/40 px-3 py-1.5 text-sm text-danger-300 transition hover:bg-danger-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex min-h-11 items-center justify-center rounded-md border border-danger-400/40 px-3 py-1.5 text-sm text-danger-300 transition hover:bg-danger-500/20 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {pending ? pendingLabel : confirmLabel}
           </button>
