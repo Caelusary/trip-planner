@@ -14,6 +14,16 @@ async function requireUser(supabase: Awaited<ReturnType<typeof createClient>>) {
   return user;
 }
 
+/**
+ * Logs the real Supabase error server-side and throws a generic message in
+ * its place — raw Postgres/Supabase error text can leak schema/constraint
+ * details, so it must never reach the client-rendered error boundary.
+ */
+function throwSafeDbError(error: { message: string }, action: string): never {
+  console.error(`Supabase error while trying to ${action}:`, error.message);
+  throw new Error(`Couldn't ${action}. Please try again.`);
+}
+
 /** Throws unless the trip exists and belongs to the given user (defense in depth on top of RLS). */
 async function requireTripOwnership(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -51,7 +61,7 @@ export async function createTrip(formData: FormData) {
     end_date: endDate,
   });
 
-  if (error) throw new Error(error.message);
+  if (error) throwSafeDbError(error, "save this trip");
 
   revalidatePath("/trips");
 }
@@ -69,7 +79,7 @@ export async function deleteTrip(tripId: string) {
     .delete()
     .eq("id", tripId)
     .eq("user_id", user.id);
-  if (error) throw new Error(error.message);
+  if (error) throwSafeDbError(error, "delete this trip");
   revalidatePath("/trips");
   redirect("/trips");
 }
@@ -110,7 +120,7 @@ export async function addStop(tripId: string, formData: FormData) {
     p_notes: notes,
   });
 
-  if (error) throw new Error(error.message);
+  if (error) throwSafeDbError(error, "add this stop");
 
   revalidatePath(`/trips/${tripId}`);
 }
@@ -127,6 +137,6 @@ export async function deleteStop(tripId: string, stopId: string) {
     .delete()
     .eq("id", stopId)
     .eq("trip_id", tripId);
-  if (error) throw new Error(error.message);
+  if (error) throwSafeDbError(error, "remove this stop");
   revalidatePath(`/trips/${tripId}`);
 }
