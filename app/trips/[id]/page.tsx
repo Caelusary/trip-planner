@@ -5,6 +5,7 @@ import { addStop, deleteStop, deleteTrip } from "@/actions/trips";
 import { forecastForDateRange, getForecast } from "@/lib/weather";
 import { cityCode, formatDateRange } from "@/lib/format";
 import { SubmitButton } from "@/components/SubmitButton";
+import { DeleteTripButton } from "@/components/DeleteTripButton";
 import { WeatherHorizon } from "@/components/WeatherHorizon";
 import { CityAutocomplete } from "@/components/CityAutocomplete";
 
@@ -71,11 +72,7 @@ export default async function TripDetailPage({
               {trip.destination_city} · {formatDateRange(trip.start_date, trip.end_date)}
             </p>
           </div>
-          <form action={deleteTripWithId}>
-            <SubmitButton variant="danger" pendingLabel="Deleting…">
-              Delete trip
-            </SubmitButton>
-          </form>
+          <DeleteTripButton tripName={trip.name} action={deleteTripWithId} />
         </div>
       </section>
 
