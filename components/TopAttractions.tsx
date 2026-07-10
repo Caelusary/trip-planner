@@ -87,18 +87,7 @@ export function TopAttractions() {
     return filtered.map((a) => {
       const label = `${a.city}, ${a.country}`;
       return {
-        id: a.id,
-        name: a.name,
-        city: a.city,
-        country: a.country,
-        image: a.image,
-        description: a.description,
-        rating: a.rating,
-        budgetMin: a.budgetMin,
-        budgetMax: a.budgetMax,
-        bestTime: a.bestTime,
-        activities: a.activities,
-        funFact: a.funFact,
+        ...a,
         href: `/trips?destination=${encodeURIComponent(label)}#plan-trip`,
       };
     });
