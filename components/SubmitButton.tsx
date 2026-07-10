@@ -4,8 +4,11 @@ import { useFormStatus } from "react-dom";
 
 type Variant = "primary" | "danger" | "ghost" | "dangerGhost";
 
+// `min-h-11` (44px) guarantees every submit button meets the minimum touch
+// target regardless of variant/padding — some variants (danger, ghost) use
+// tight text-sm padding that would otherwise land at ~32-36px tall.
 const BASE =
-  "transition-[background-color,transform,box-shadow] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] active:translate-y-px";
+  "inline-flex min-h-11 items-center justify-center transition-[background-color,transform,box-shadow] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] active:translate-y-px";
 
 const VARIANT_CLASSES: Record<Variant, string> = {
   primary: `${BASE} rounded-md bg-accent-500 px-4 py-2 font-medium text-ink-950 hover:bg-accent-400`,
