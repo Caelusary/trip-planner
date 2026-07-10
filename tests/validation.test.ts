@@ -49,6 +49,16 @@ describe("requireDate", () => {
   it("throws for null", () => {
     expect(() => requireDate(null, "start date")).toThrow("Invalid start date.");
   });
+
+  it("throws for a calendar-invalid date instead of normalizing it", () => {
+    expect(() => requireDate(fd("2026-02-30"), "start date")).toThrow("Invalid start date.");
+    expect(() => requireDate(fd("2026-13-01"), "start date")).toThrow("Invalid start date.");
+    expect(() => requireDate(fd("2026-04-31"), "start date")).toThrow("Invalid start date.");
+  });
+
+  it("accepts a valid leap day", () => {
+    expect(requireDate(fd("2024-02-29"), "start date")).toBe("2024-02-29");
+  });
 });
 
 describe("optionalDate", () => {
