@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# Cancel superseded runs on the same branch/PR instead of letting them queue.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-test-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run lint
+
+      - run: npm test
+
+      # No Supabase/OpenWeatherMap secrets are configured here on purpose:
+      # every route in this app is server-rendered on demand (no static
+      # generation touches lib/env.ts at build time), so `next build`
+      # succeeds without them. This only validates that the app compiles —
+      # it is not a substitute for Vercel's own deploy-time build.
+      - run: npm run build
