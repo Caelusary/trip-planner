@@ -12,6 +12,14 @@ const HEIGHT = 138;
  * sit directly on the line they describe. Pure SVG, no client JS.
  */
 export function WeatherHorizon({ forecast }: { forecast: ForecastDay[] }) {
+  // Every calculation below (min/max temp range, the SVG path strings
+  // indexing points[0] and points[points.length - 1]) assumes at least one
+  // day of data — callers are expected to only render this when
+  // forecast.length > 0, but degrade to nothing instead of throwing if that
+  // ever isn't true (e.g. a future caller forgetting the guard), rather than
+  // crashing the whole page render.
+  if (forecast.length === 0) return null;
+
   const width = forecast.length * DAY_WIDTH;
   const highs = forecast.map((d) => d.tempMax);
   const lows = forecast.map((d) => d.tempMin);
