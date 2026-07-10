@@ -12,6 +12,7 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
   over_email_send_rate_limit: "Too many attempts — please wait a moment and try again.",
   email_address_invalid: "That email address doesn't look valid.",
   invalid_input: "Please enter a valid email and password (at least 6 characters).",
+  rate_limited: "Too many attempts — please wait a minute and try again.",
 };
 
 const DEFAULT_CODE = "unknown";
