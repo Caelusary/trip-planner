@@ -1,10 +1,17 @@
 import "server-only";
 
 import { getOpenWeatherApiKey } from "@/lib/env";
+import { COUNTRY_NAMES } from "@/lib/attractions";
 
 const GEO_URL = "https://api.openweathermap.org/geo/1.0/direct";
 const REVERSE_GEO_URL = "https://api.openweathermap.org/geo/1.0/reverse";
 const FORECAST_URL = "https://api.openweathermap.org/data/2.5/forecast";
+
+// Lets a bare country name (e.g. "Japan") be scoped to its ISO country code
+// below — see the comment in fetchGeoResults for why that matters.
+const COUNTRY_NAME_TO_CODE: Record<string, string> = Object.fromEntries(
+  Object.entries(COUNTRY_NAMES).map(([code, name]) => [name.toLowerCase(), code]),
+);
 
 interface GeoResult {
   label: string;
@@ -16,7 +23,19 @@ async function fetchGeoResults(query: string, limit: number): Promise<GeoResult[
   const apiKey = getOpenWeatherApiKey();
   if (!apiKey || !query) return [];
 
-  const url = `${GEO_URL}?q=${encodeURIComponent(query)}&limit=${limit}&appid=${apiKey}`;
+  // OpenWeatherMap's direct geocoding API only matches place NAMES — it has
+  // no concept of "the country itself" — so a bare country name like
+  // "Japan" can spuriously match an unrelated same-named locality elsewhere
+  // (there's a real "Japan, Pennsylvania, US") instead of anywhere in the
+  // actual country. When the query is exactly a known country name, scope
+  // the search to that ISO country code instead: a same-name locality
+  // outside the country can then never win, and if nothing inside the
+  // country happens to share that name, this returns no results — a clear
+  // "couldn't geocode this" rather than a confidently wrong location.
+  const countryCode = COUNTRY_NAME_TO_CODE[query.trim().toLowerCase()];
+  const effectiveQuery = countryCode ? `${query},${countryCode}` : query;
+
+  const url = `${GEO_URL}?q=${encodeURIComponent(effectiveQuery)}&limit=${limit}&appid=${apiKey}`;
   try {
     // City→coords mappings are effectively static; cache for 30 days.
     const res = await fetch(url, { next: { revalidate: 2592000 } });
