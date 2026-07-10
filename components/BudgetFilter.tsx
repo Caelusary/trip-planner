@@ -201,7 +201,7 @@ export function BudgetFilter({
           aria-label="Maximum budget"
         />
       </div>
-      <div className="-mt-1 flex justify-between text-[9px] text-white/30">
+      <div className="-mt-1 flex justify-between text-[10px] text-white/50">
         <span>{symbol}0</span>
         <span>{symbol}{Math.round(fromUSD(VALUE_MID_USD, currency)).toLocaleString()}</span>
         <span>{symbol}{trackBoundsMax.toLocaleString()}</span>
@@ -257,7 +257,7 @@ export function BudgetFilter({
             Showing {matchCount} of {totalCount}
           </p>
         )}
-        {currency !== "USD" && <p className="shrink-0 text-white/30">base: USD</p>}
+        {currency !== "USD" && <p className="shrink-0 text-white/50">base: USD</p>}
       </div>
     </div>
   );
