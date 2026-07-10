@@ -121,7 +121,7 @@ export function TopAttractions() {
         </h2>
         {detecting ? (
           <span
-            className="flex shrink-0 items-center gap-1.5 text-[11px] text-white/50"
+            className="flex shrink-0 items-center gap-1.5 text-xs text-white/50"
             aria-live="polite"
           >
             <span
@@ -135,7 +135,13 @@ export function TopAttractions() {
             <button
               type="button"
               onClick={handleDetectClick}
-              className="text-accent-400 shrink-0 text-[11px] font-medium underline-offset-2 hover:underline"
+              // A secondary, optional convenience action — the country
+              // <select> right below is the always-available, fully-sized
+              // equivalent control, so this is padded to the ~24px WCAG AA
+              // touch-target minimum (via -m-2/p-2 hit-slop, invisible so it
+              // doesn't visually bulk up next to the heading) rather than the
+              // full 44px used for primary actions elsewhere.
+              className="text-accent-400 -m-2 shrink-0 rounded-md p-2 text-xs font-medium underline-offset-2 hover:underline"
             >
               Use my location
             </button>
