@@ -39,12 +39,15 @@ export function CityAutocomplete({
   const containerRef = useRef<HTMLDivElement>(null);
   const requestIdRef = useRef(0);
 
+  const query = value.trim();
+  // Derived rather than mirrored into state: below the minimum length there's
+  // simply nothing to show, so this hides the dropdown the instant the user
+  // deletes back below threshold instead of waiting a render for an effect
+  // to clear stale `suggestions` state.
+  const queryTooShort = query.length < MIN_QUERY_LENGTH;
+
   useEffect(() => {
-    const query = value.trim();
-    if (query.length < MIN_QUERY_LENGTH) {
-      setSuggestions([]);
-      return;
-    }
+    if (queryTooShort) return;
 
     const requestId = ++requestIdRef.current;
     const timer = setTimeout(async () => {
@@ -60,7 +63,9 @@ export function CityAutocomplete({
     }, DEBOUNCE_MS);
 
     return () => clearTimeout(timer);
-  }, [value]);
+  }, [query, queryTooShort]);
+
+  const visibleSuggestions = queryTooShort ? [] : suggestions;
 
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
@@ -80,17 +85,17 @@ export function CityAutocomplete({
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
-    if (!open || suggestions.length === 0) return;
+    if (!open || visibleSuggestions.length === 0) return;
 
     if (event.key === "ArrowDown") {
       event.preventDefault();
-      setActiveIndex((i) => (i + 1) % suggestions.length);
+      setActiveIndex((i) => (i + 1) % visibleSuggestions.length);
     } else if (event.key === "ArrowUp") {
       event.preventDefault();
-      setActiveIndex((i) => (i - 1 + suggestions.length) % suggestions.length);
+      setActiveIndex((i) => (i - 1 + visibleSuggestions.length) % visibleSuggestions.length);
     } else if (event.key === "Enter" && activeIndex >= 0) {
       event.preventDefault();
-      selectSuggestion(suggestions[activeIndex]);
+      selectSuggestion(visibleSuggestions[activeIndex]);
     } else if (event.key === "Escape") {
       setOpen(false);
     }
@@ -106,7 +111,7 @@ export function CityAutocomplete({
           setValue(event.target.value);
           setActiveIndex(-1);
         }}
-        onFocus={() => suggestions.length > 0 && setOpen(true)}
+        onFocus={() => visibleSuggestions.length > 0 && setOpen(true)}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         required={required}
@@ -120,13 +125,13 @@ export function CityAutocomplete({
         }
         className={className}
       />
-      {open && suggestions.length > 0 && (
+      {open && visibleSuggestions.length > 0 && (
         <ul
           id={listboxId}
           role="listbox"
           className="glass-card absolute top-full left-0 z-20 mt-1 max-h-56 w-full overflow-auto p-1"
         >
-          {suggestions.map((suggestion, index) => (
+          {visibleSuggestions.map((suggestion, index) => (
             <li
               key={`${suggestion.label}-${suggestion.lat}-${suggestion.lon}`}
               id={`${listboxId}-option-${index}`}
