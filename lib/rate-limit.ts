@@ -32,6 +32,11 @@ export function isRateLimited(key: string, limit: number): boolean {
 }
 
 export function clientKey(request: Request): string {
-  const forwardedFor = request.headers.get("x-forwarded-for");
+  return clientKeyFromHeaders(request.headers);
+}
+
+/** Same lookup as {@link clientKey}, for callers (server actions) that only have `next/headers`, not a `Request`. */
+export function clientKeyFromHeaders(requestHeaders: Headers): string {
+  const forwardedFor = requestHeaders.get("x-forwarded-for");
   return forwardedFor?.split(",")[0].trim() || "unknown";
 }
