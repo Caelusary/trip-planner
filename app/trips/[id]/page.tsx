@@ -43,9 +43,15 @@ export default async function TripDetailPage({
   if (trip.destination_lat != null && trip.destination_lon != null) {
     const fullForecast = await getForecast(trip.destination_lat, trip.destination_lon);
     forecast = forecastForDateRange(fullForecast, trip.start_date, trip.end_date);
-    if (fullForecast.length && forecast.length === 0) {
-      forecastNote =
-        "Forecast opens up closer to your trip — OpenWeatherMap only covers the next 5 days.";
+    if (forecast.length === 0) {
+      // Two distinct reasons the trip's date range can end up with no
+      // matching days, told apart so the message doesn't blame "5 day
+      // limit" on what's actually a missing API key or an upstream outage
+      // (fullForecast itself came back empty) — see getForecast's own
+      // graceful-degradation comment in lib/weather.ts.
+      forecastNote = fullForecast.length
+        ? "Forecast opens up closer to your trip — OpenWeatherMap only covers the next 5 days."
+        : "Weather forecast is temporarily unavailable for this destination.";
     }
   } else {
     forecastNote = "No weather data available for this destination.";
