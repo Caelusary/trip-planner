@@ -1,78 +1,10 @@
-import { Suspense } from "react";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { preconnect } from "react-dom";
 import { createClient } from "@/lib/supabase/server";
 import { createTrip } from "@/actions/trips";
-import { cityCode, formatDateRange } from "@/lib/format";
 import { SubmitButton } from "@/components/SubmitButton";
 import { CityAutocomplete } from "@/components/CityAutocomplete";
 import { TopAttractions } from "@/components/TopAttractions";
-
-function TripsListSkeleton() {
-  return (
-    <div className="flex flex-col gap-4" aria-hidden="true">
-      {[0, 1, 2].map((i) => (
-        <div key={i} className="glass-card h-[76px] animate-pulse" />
-      ))}
-    </div>
-  );
-}
-
-async function TripsList({ userId }: { userId: string }) {
-  const supabase = await createClient();
-
-  // Select only the columns the list view renders (not `*`) and cap rows
-  // returned — an unbounded, all-column query would grow linearly with a
-  // user's trip history forever with no upper bound. Also scope explicitly
-  // to the signed-in user (defense in depth on top of RLS) instead of
-  // relying solely on row-level security to filter the list.
-  const { data: trips } = await supabase
-    .from("trips")
-    .select("id, name, destination_city, start_date, end_date")
-    .eq("user_id", userId)
-    .order("start_date", { ascending: true })
-    .limit(100);
-
-  return trips?.length ? (
-    <div className="stagger flex flex-col gap-4">
-      {trips.map((trip) => (
-        <Link
-          key={trip.id}
-          href={`/trips/${trip.id}`}
-          className="glass-card glass-card-link flex items-stretch overflow-hidden"
-        >
-          <div className="ticket-stub flex w-24 shrink-0 flex-col items-center justify-center gap-1 py-4">
-            <span className="font-display text-accent-400 text-2xl font-semibold tracking-wide">
-              {cityCode(trip.destination_city)}
-            </span>
-            <span className="text-[10px] tracking-widest text-white/60 uppercase">
-              Destination
-            </span>
-          </div>
-          <div className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-x-4 gap-y-1 px-5 py-4">
-            <div className="min-w-0">
-              <p className="truncate font-medium">{trip.name}</p>
-              <p className="truncate text-sm text-white/60">{trip.destination_city}</p>
-            </div>
-            <div className="shrink-0 text-right">
-              <p className="text-[10px] tracking-widest text-white/60 uppercase">
-                Travel dates
-              </p>
-              <p className="text-sm text-white/80">
-                {formatDateRange(trip.start_date, trip.end_date)}
-              </p>
-            </div>
-          </div>
-        </Link>
-      ))}
-    </div>
-  ) : (
-    <p className="glass-card p-6 text-sm text-white/70">
-      No trips yet — plan your first one above.
-    </p>
-  );
-}
 
 export default async function TripsPage({
   searchParams,
@@ -131,13 +63,6 @@ export default async function TripsPage({
             Create trip
           </SubmitButton>
         </form>
-      </section>
-
-      <section className="flex flex-col gap-4">
-        <h2 className="font-display text-lg font-semibold">Your trips</h2>
-        <Suspense fallback={<TripsListSkeleton />}>
-          <TripsList userId={user.id} />
-        </Suspense>
       </section>
     </div>
   );
