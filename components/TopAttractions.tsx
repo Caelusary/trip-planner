@@ -19,8 +19,13 @@ interface BudgetRangeUSD {
 }
 
 export function TopAttractions() {
-  const { country: detectedCountry, detecting, supported: geolocationSupported, detect } =
-    useUserCountry();
+  const {
+    country: detectedCountry,
+    detecting,
+    supported: geolocationSupported,
+    error: detectError,
+    detect,
+  } = useUserCountry();
   // Once the user picks a country from the dropdown it sticks, overriding
   // whatever geolocation resolves to (or already resolved to). Until then,
   // the carousel tracks the detected country live.
@@ -104,52 +109,68 @@ export function TopAttractions() {
 
   return (
     <section className="flex flex-col items-center gap-4">
-      <div className="flex w-full max-w-xs items-center justify-between gap-3">
-        <h2 className="font-display text-lg font-semibold">
-          Top Attractions in {COUNTRY_NAMES[country]}
-        </h2>
-        {detecting ? (
-          <span
-            className="flex shrink-0 items-center gap-1.5 text-xs text-white/50"
-            aria-live="polite"
-          >
+      <h2 className="font-display w-full max-w-xs text-lg font-semibold">
+        Top Attractions in {COUNTRY_NAMES[country]}
+      </h2>
+
+      <div className="flex w-full max-w-xs items-center gap-2">
+        <select
+          value={country}
+          onChange={(event) => setManualCountry(event.target.value as CountryCode)}
+          className="glass-input relative z-10 min-w-0 flex-1 cursor-pointer px-3 py-2 text-sm pointer-events-auto"
+          aria-label="Choose a country"
+        >
+          {COUNTRY_LIST.map((option) => (
+            <option key={option.code} value={option.code}>
+              {option.name}
+            </option>
+          ))}
+        </select>
+
+        {geolocationSupported &&
+          (detecting ? (
             <span
-              aria-hidden="true"
-              className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent-400"
-            />
-            Detecting…
-          </span>
-        ) : (
-          geolocationSupported && (
+              className="flex h-11 w-11 shrink-0 items-center justify-center"
+              aria-live="polite"
+              aria-label="Detecting your location"
+            >
+              <span
+                aria-hidden="true"
+                className="border-accent-400 h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"
+              />
+            </span>
+          ) : (
             <button
               type="button"
               onClick={handleDetectClick}
-              // A secondary, optional convenience action — the country
-              // <select> right below is the always-available, fully-sized
-              // equivalent control, so this is padded to the ~24px WCAG AA
-              // touch-target minimum (via -m-2/p-2 hit-slop, invisible so it
-              // doesn't visually bulk up next to the heading) rather than the
-              // full 44px used for primary actions elsewhere.
-              className="text-accent-400 -m-2 shrink-0 rounded-md p-2 text-xs font-medium underline-offset-2 hover:underline"
+              aria-label="Use my location"
+              title="Use my location"
+              className="text-accent-400 flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-white/30 transition hover:bg-white/10"
             >
-              Use my location
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M12 21s7-7.58 7-12A7 7 0 0 0 5 9c0 4.42 7 12 7 12Z"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinejoin="round"
+                />
+                <circle cx="12" cy="9" r="2.5" stroke="currentColor" strokeWidth="2" />
+              </svg>
             </button>
-          )
-        )}
+          ))}
       </div>
 
-      <select
-        value={country}
-        onChange={(event) => setManualCountry(event.target.value as CountryCode)}
-        className="glass-input relative z-10 w-full max-w-xs cursor-pointer px-3 py-2 text-sm pointer-events-auto"
-        aria-label="Choose a country"
-      >
-        {COUNTRY_LIST.map((option) => (
-          <option key={option.code} value={option.code}>
-            {option.name}
-          </option>
-        ))}
-      </select>
+      {detectError && (
+        <p role="alert" className="text-danger-300 w-full max-w-xs text-xs">
+          {detectError}
+        </p>
+      )}
 
       <BudgetFilter
         datasetRangeUSD={datasetRangeUSD}
