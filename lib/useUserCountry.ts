@@ -13,10 +13,12 @@ export function useUserCountry(): {
   country: CountryCode;
   detecting: boolean;
   supported: boolean;
+  error: string | null;
   detect: () => void;
 } {
   const [country, setCountry] = useState<CountryCode>(DEFAULT_COUNTRY);
   const [detecting, setDetecting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   // Starts false on both server and the client's first render (the server
   // has no `navigator` at all) and flips after mount — checking
   // `typeof navigator !== "undefined"` directly during render is exactly
@@ -36,6 +38,7 @@ export function useUserCountry(): {
   const detect = useCallback(() => {
     if (!("geolocation" in navigator)) return;
     setDetecting(true);
+    setError(null);
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
@@ -43,21 +46,32 @@ export function useUserCountry(): {
           const { latitude, longitude } = position.coords;
           const res = await fetch(`/api/geolocate?lat=${latitude}&lon=${longitude}`);
           const data = await res.json();
-          if (mountedRef.current && isSupportedCountry(data.country)) {
+          if (!mountedRef.current) return;
+          if (isSupportedCountry(data.country)) {
             setCountry(data.country);
+          } else {
+            setError("Couldn't match your location to a supported country.");
           }
         } catch {
-          // Network failure — stay on the current country.
+          if (mountedRef.current) {
+            setError("Couldn't reach the location lookup — check your connection.");
+          }
         } finally {
           if (mountedRef.current) setDetecting(false);
         }
       },
-      () => {
-        if (mountedRef.current) setDetecting(false);
+      (geoError) => {
+        if (!mountedRef.current) return;
+        setDetecting(false);
+        setError(
+          geoError.code === geoError.PERMISSION_DENIED
+            ? "Location access was denied — allow it in your browser's site settings to use this."
+            : "Couldn't determine your location. Please try again.",
+        );
       },
       { timeout: GEOLOCATION_TIMEOUT_MS, maximumAge: 600_000 },
     );
   }, []);
 
-  return { country, detecting, supported, detect };
+  return { country, detecting, supported, error, detect };
 }
