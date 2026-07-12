@@ -4,10 +4,10 @@ import { SubmitButton } from "@/components/SubmitButton";
 
 export function Header() {
   return (
-    <header className="flex items-center justify-between px-6 py-5">
+    <header className="flex items-center justify-between gap-4 px-6 py-5">
       <Link
         href="/trips"
-        className="flex items-center gap-2 rounded-md transition hover:opacity-80"
+        className="flex shrink-0 items-center gap-2 rounded-md transition hover:opacity-80"
       >
         <svg
           width="20"
@@ -27,7 +27,15 @@ export function Header() {
           Trip Planner
         </span>
       </Link>
-      <form action={logout}>
+      <nav className="flex items-center gap-4 text-sm text-white/70">
+        <Link href="/trips/upcoming" className="rounded-md transition hover:text-white">
+          Upcoming trips
+        </Link>
+        <Link href="/trips/history" className="rounded-md transition hover:text-white">
+          Trip history
+        </Link>
+      </nav>
+      <form action={logout} className="shrink-0">
         <SubmitButton variant="ghost" pendingLabel="Logging out…">
           Log out
         </SubmitButton>
