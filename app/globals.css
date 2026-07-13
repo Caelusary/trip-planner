@@ -35,15 +35,22 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   min-height: 100vh;
-  /* Dusk horizon: near-neutral charcoal for most of the viewport, warming
-     only at the very bottom — restraint over gradient-soup. */
+  /* Dusk horizon: near-neutral charcoal at the top, warming toward the
+     bottom of the page. `background-attachment: fixed` used to be set
+     here, but it sizes the gradient to the VIEWPORT rather than the full
+     (often taller) page — on any page longer than one screen, the
+     gradient's own 100% stop lands at one-viewport-height down, then
+     repeats from the top again, showing up as a hard seam partway down
+     the page. Plain (scrolling) attachment sizes the gradient to the
+     actual full page height instead, so it always spans top-to-bottom
+     seamlessly no matter how tall the content is. */
   background: linear-gradient(
     180deg,
     var(--color-ink-950) 0%,
     oklch(0.19 0.03 267) 55%,
     oklch(0.24 0.06 35) 100%
   );
-  background-attachment: fixed;
+  background-repeat: no-repeat;
 }
 
 .font-display {
@@ -242,4 +249,50 @@ button:focus-visible {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* ---------- Trips tab switch (Upcoming <-> History) ---------- */
+/* Plain CSS, not the browser View Transitions API — verified live that
+   <ViewTransition> + Suspense-streamed content never actually animated
+   (the transition's DOM snapshot is captured before the streamed trip list
+   arrives, so there was nothing to animate). This approach doesn't depend
+   on data-fetch timing at all: the active-tab underline
+   (components/TripsNav.tsx) transitions its own measured position/width
+   directly via a plain CSS `transition`, and the tab content
+   (components/TabPanelTransition.tsx) plays a fixed one-shot `animation`
+   the instant it mounts, regardless of how long the fetch behind it took.
+   Both are covered by the universal prefers-reduced-motion block above
+   (real DOM elements/classes, not pseudo-elements, so no separate override
+   is needed here). */
+.trip-tab-indicator {
+  transition:
+    transform 280ms cubic-bezier(0.16, 1, 0.3, 1),
+    width 280ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes tab-panel-enter-forward {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes tab-panel-enter-back {
+  from {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.tab-panel-enter-forward {
+  animation: tab-panel-enter-forward 260ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+.tab-panel-enter-back {
+  animation: tab-panel-enter-back 260ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
