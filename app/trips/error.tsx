@@ -11,7 +11,8 @@ import { useEffect } from "react";
  * its generic error page with no way back except a full reload.
  *
  * Kept scoped to app/trips/ (rather than only a single root boundary) so
- * TripsLayout's <Header> keeps rendering above the error UI.
+ * TripsLayout's sidebar (components/TripsSidebar.tsx) keeps rendering
+ * alongside the error UI.
  */
 export default function TripsError({
   error,
