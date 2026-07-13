@@ -1,7 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useState } from "react";
-import { TAB_DIRECTION_KEY } from "@/components/TripsNav";
+import { TAB_DIRECTION_KEY } from "@/components/SidebarNav";
 
 /**
  * Plays a one-shot enter animation when this mounts after a tab switch
