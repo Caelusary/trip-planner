@@ -71,18 +71,27 @@ export function CarouselStack({ items, selectedIds, onToggleSelect }: CarouselSt
     setIndex((current) => Math.min(current, Math.max(items.length - 1, 0)));
   }
 
-  const atStart = index === 0;
-  const atEnd = index === items.length - 1;
+  // Circular: the deck wraps around in both directions rather than
+  // stopping at the ends, so stepping past the last item lands back on the
+  // first (and vice versa). `((n % len) + len) % len` wraps correctly for
+  // negative results too, unlike a plain `%` (JS's modulo keeps the sign of
+  // its left operand, so `-1 % 5` is `-1`, not `4`).
+  const canNavigate = items.length > 1;
 
   // Relative moves use a functional update so two events arriving before
   // React re-renders (e.g. a fast double-click) each advance by one step
   // instead of both resolving against the same stale `index`.
   function step(delta: number) {
-    setIndex((current) => Math.min(Math.max(current + delta, 0), items.length - 1));
+    setIndex((current) => {
+      const len = items.length;
+      return len === 0 ? current : ((current + delta) % len + len) % len;
+    });
   }
 
   function goTo(next: number) {
-    setIndex(Math.min(Math.max(next, 0), items.length - 1));
+    const len = items.length;
+    if (len === 0) return;
+    setIndex(((next % len) + len) % len);
   }
 
   function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
@@ -128,15 +137,24 @@ export function CarouselStack({ items, selectedIds, onToggleSelect }: CarouselSt
       // intent to plan a trip here.
       return;
     }
-    if (delta <= -DRAG_COMMIT_PX && !atEnd) step(1);
-    else if (delta >= DRAG_COMMIT_PX && !atStart) step(-1);
+    if (delta <= -DRAG_COMMIT_PX) step(1);
+    else if (delta >= DRAG_COMMIT_PX) step(-1);
   }
 
   const visible = useMemo(() => {
+    const len = items.length;
+    if (len === 0) return [];
     const range: { item: CarouselItem; slot: number }[] = [];
+    // Dedup via `seen`: when there are fewer items than slots (SLOTS_BEHIND
+    // + SLOTS_AHEAD + 1 = 9), wrapping would otherwise place the same
+    // physical item at two different slots at once (visually a duplicate
+    // card), since the loop keeps circling back over a short list.
+    const seen = new Set<number>();
     for (let offset = -SLOTS_BEHIND; offset <= SLOTS_AHEAD; offset++) {
-      const i = index + offset;
-      if (i >= 0 && i < items.length) range.push({ item: items[i], slot: offset });
+      const i = ((index + offset) % len + len) % len;
+      if (seen.has(i)) continue;
+      seen.add(i);
+      range.push({ item: items[i], slot: offset });
     }
     return range;
   }, [items, index]);
@@ -322,7 +340,7 @@ export function CarouselStack({ items, selectedIds, onToggleSelect }: CarouselSt
         <button
           type="button"
           aria-label="Previous destination"
-          disabled={atStart}
+          disabled={!canNavigate}
           onClick={() => step(-1)}
           className="absolute top-1/2 left-2 z-50 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-ink-900/90 text-lg text-white shadow-lg backdrop-blur transition enabled:hover:scale-105 enabled:hover:bg-ink-800 disabled:cursor-not-allowed disabled:opacity-30"
         >
@@ -331,7 +349,7 @@ export function CarouselStack({ items, selectedIds, onToggleSelect }: CarouselSt
         <button
           type="button"
           aria-label="Next destination"
-          disabled={atEnd}
+          disabled={!canNavigate}
           onClick={() => step(1)}
           className="absolute top-1/2 right-2 z-50 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-ink-900/90 text-lg text-white shadow-lg backdrop-blur transition enabled:hover:scale-105 enabled:hover:bg-ink-800 disabled:cursor-not-allowed disabled:opacity-30"
         >
