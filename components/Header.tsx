@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { logout } from "@/actions/auth";
 import { SubmitButton } from "@/components/SubmitButton";
+import { TripsNav } from "@/components/TripsNav";
 
 export function Header() {
   return (
@@ -27,14 +28,7 @@ export function Header() {
           Trip Planner
         </span>
       </Link>
-      <nav className="flex items-center gap-4 text-sm text-white/70">
-        <Link href="/trips/upcoming" className="rounded-md transition hover:text-white">
-          Upcoming trips
-        </Link>
-        <Link href="/trips/history" className="rounded-md transition hover:text-white">
-          Trip history
-        </Link>
-      </nav>
+      <TripsNav />
       <form action={logout} className="shrink-0">
         <SubmitButton variant="ghost" pendingLabel="Logging out…">
           Log out
