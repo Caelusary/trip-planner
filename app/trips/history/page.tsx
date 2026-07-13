@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { fetchPastTrips } from "@/lib/trips";
 import { TripCard, TripListSkeleton } from "@/components/TripCard";
+import { TabPanelTransition } from "@/components/TabPanelTransition";
 
 async function PastTripsList({ userId }: { userId: string }) {
   const supabase = await createClient();
@@ -30,19 +31,21 @@ export default async function TripHistoryPage() {
   if (!user) redirect("/login");
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6 pt-4">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="font-display text-lg font-semibold">Trip history</h1>
-        <Link
-          href="/trips"
-          className="text-accent-400 -m-2 shrink-0 rounded-md p-2 text-xs font-medium underline-offset-2 hover:underline"
-        >
-          Back to trips
-        </Link>
+    <TabPanelTransition>
+      <div className="mx-auto flex max-w-3xl flex-col gap-6 pt-4">
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="font-display text-lg font-semibold">Trip history</h1>
+          <Link
+            href="/trips"
+            className="text-accent-400 -m-2 shrink-0 rounded-md p-2 text-xs font-medium underline-offset-2 hover:underline"
+          >
+            Back to trips
+          </Link>
+        </div>
+        <Suspense fallback={<TripListSkeleton />}>
+          <PastTripsList userId={user.id} />
+        </Suspense>
       </div>
-      <Suspense fallback={<TripListSkeleton />}>
-        <PastTripsList userId={user.id} />
-      </Suspense>
-    </div>
+    </TabPanelTransition>
   );
 }
