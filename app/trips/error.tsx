@@ -1,5 +1,6 @@
 "use client";
 
+import * as Sentry from "@sentry/nextjs";
 import { useEffect } from "react";
 
 /**
@@ -23,6 +24,7 @@ export default function TripsError({
 }) {
   useEffect(() => {
     console.error("Trip planner error:", error);
+    Sentry.captureException(error);
   }, [error]);
 
   return (
