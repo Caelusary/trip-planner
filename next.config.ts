@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 // Content-Security-Policy. Audited against actual usage in this codebase
 // (grepped for <script>, <iframe>, analytics SDKs, data: URIs, and every
@@ -50,8 +51,11 @@ const contentSecurityPolicy = [
   // *.supabase.co. OpenWeatherMap's data API (lib/weather.ts) is guarded by
   // `import "server-only"` and is only called from Server Components/route
   // handlers. So the browser only ever needs to talk to itself (Server
-  // Actions, /api/geocode, /api/geolocate all being same-origin POSTs/GETs).
-  "connect-src 'self'",
+  // Actions, /api/geocode, /api/geolocate all being same-origin POSTs/GETs)
+  // — plus Sentry's ingest endpoint (instrumentation-client.ts), the one
+  // deliberate exception: client-side errors are reported directly from the
+  // browser, not proxied through this app's own server.
+  "connect-src 'self' https://*.ingest.us.sentry.io",
   // All forms in this app (login, signup, add/delete stop, delete trip)
   // post to Next.js Server Actions on the same origin; there's no external
   // form target anywhere.
@@ -119,4 +123,22 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// Wraps the build to upload source maps to Sentry for readable stack
+// traces — inert (falls back to the plain config, verified: the plugin
+// skips upload entirely) unless SENTRY_AUTH_TOKEN is set, which it isn't
+// yet. `org`/`project` below are placeholders, not real values — only the
+// DSN's numeric org/project IDs are known here, not their human-readable
+// slugs. Fill these in (visible in your Sentry dashboard's URL) and add
+// SENTRY_AUTH_TOKEN (Settings > Auth Tokens on sentry.io) as an env var to
+// enable source map upload; until then this has no effect on the build.
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG ?? "",
+  project: process.env.SENTRY_PROJECT ?? "",
+  silent: true,
+  // Not `disableLogger` — deprecated, and explicitly unsupported under
+  // Turbopack (which this app's dev/build both use) per Sentry's own
+  // build-time warning. This is the documented Turbopack-compatible
+  // replacement.
+  webpack: { treeshake: { removeDebugLogging: true } },
+  telemetry: false,
+});
