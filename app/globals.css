@@ -43,8 +43,19 @@ body {
      repeats from the top again, showing up as a hard seam partway down
      the page. Plain (scrolling) attachment sizes the gradient to the
      actual full page height instead, so it always spans top-to-bottom
-     seamlessly no matter how tall the content is. */
-  background: linear-gradient(
+     seamlessly no matter how tall the content is.
+
+     `background-image` (longhand), not the `background` shorthand: the
+     oklch() colors here make Tailwind's build auto-generate an
+     `@supports (color: lab(...))` fallback block for older browsers, and
+     that fallback re-declares whichever property is used here. A
+     shorthand `background:` fallback would silently reset
+     `background-repeat` back to its `repeat` default (verified live —
+     this actually happened, `no-repeat` computed as `repeat` in a real
+     browser) since CSS shorthands reset every sub-property they don't
+     explicitly set. `background-image` only ever touches the image, so
+     `background-repeat` below is never clobbered by the fallback. */
+  background-image: linear-gradient(
     180deg,
     var(--color-ink-950) 0%,
     oklch(0.19 0.03 267) 55%,
