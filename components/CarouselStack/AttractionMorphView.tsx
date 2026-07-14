@@ -170,7 +170,13 @@ export function AttractionMorphView({
                       alt={activity.name}
                       fill
                       sizes="(max-width: 640px) 45vw, 200px"
-                      loading="lazy"
+                      // Eager, not lazy: same fix as CarouselStack's peek
+                      // cards — `loading="lazy"` never actually triggered
+                      // here either (verified live, stuck at
+                      // `complete: false` indefinitely). At most 3-5
+                      // activities ever render per attraction, so eagerly
+                      // loading all of them is cheap.
+                      loading="eager"
                       className="object-cover"
                     />
                   </div>
