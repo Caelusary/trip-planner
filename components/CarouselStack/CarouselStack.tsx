@@ -225,12 +225,18 @@ export function CarouselStack({ items, selectedIds, onToggleSelect }: CarouselSt
                     alt={item.name}
                     fill
                     draggable={false}
-                    // Only the primary card is ever the user's immediate
-                    // focus; the peeking cards behind/ahead of it (up to 6
-                    // more images mounted at once) can decode/paint whenever
-                    // the browser gets around to it instead of competing for
-                    // bandwidth and main-thread time with the active card.
-                    loading={slot === 0 ? "eager" : "lazy"}
+                    // All slots eager: `loading="lazy"` on the peeking cards
+                    // never actually triggered here — verified live that
+                    // every lazy-loaded peek image stayed stuck at
+                    // `complete: false` / `naturalWidth: 0` indefinitely
+                    // (even ones whose network request had already
+                    // succeeded), an IntersectionObserver interaction quirk
+                    // with this stack's 3D transforms/will-change layers.
+                    // Since at most 9 cards are ever mounted at once (a
+                    // small, bounded set, not an unbounded list), eagerly
+                    // loading all of them is cheap and guarantees every
+                    // visible peek actually shows its own photo.
+                    loading="eager"
                     sizes="(min-width: 768px) 352px, 90vw"
                     className="select-none object-cover"
                   />
