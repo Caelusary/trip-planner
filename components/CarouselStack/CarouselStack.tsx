@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
+import { RetryImage } from "@/components/RetryImage";
 import { formatBudget } from "@/lib/attractions";
 import { AttractionMorphView } from "./AttractionMorphView";
 import { SLOTS_AHEAD, SLOTS_BEHIND, styleForSlot } from "./styleForSlot";
@@ -174,7 +174,7 @@ export function CarouselStack({ items, selectedIds, onToggleSelect }: CarouselSt
         above it).
       */}
       <div
-        className= "relative isolate mx-auto h-[29rem] w-full max-w-3xl [container-type:inline-size]"
+        className="relative isolate mx-auto h-[29rem] w-full max-w-3xl [container-type:inline-size] [perspective:950px]"
         tabIndex={0}
         onKeyDown={(event) => {
           if(event.key === "ArrowLeft") step(-1);
@@ -183,10 +183,12 @@ export function CarouselStack({ items, selectedIds, onToggleSelect }: CarouselSt
         >
         {visible.map(({ item, slot }) => {
           const style = styleForSlot(slot, slot === 0 ? dragPx : 0);
-          // Both peek directions are interactive: clicking a left peek
-          // steps back to it, a right peek steps forward to it. Symmetric
-          // on both sides — up to three peeks deep either way.
-          const interactive = slot !== 0 && Math.abs(slot) <= 3;
+          // Both peek directions are interactive: clicking a peek anywhere
+          // around the visible ring jumps straight to it — every slot is
+          // now a real, visible position on the circle (see
+          // styleForSlot.ts), not just the nearer half with an invisible
+          // pre-stage beyond it.
+          const interactive = slot !== 0;
           const selected = selectedIds.has(item.id);
           return (
             <div
@@ -220,7 +222,7 @@ export function CarouselStack({ items, selectedIds, onToggleSelect }: CarouselSt
                 }`}
               >
                 <div className="relative h-44 w-full shrink-0 overflow-hidden">
-                  <Image
+                  <RetryImage
                     src={item.image}
                     alt={item.name}
                     fill
@@ -234,8 +236,13 @@ export function CarouselStack({ items, selectedIds, onToggleSelect }: CarouselSt
                     // with this stack's 3D transforms/will-change layers.
                     // Since at most 9 cards are ever mounted at once (a
                     // small, bounded set, not an unbounded list), eagerly
-                    // loading all of them is cheap and guarantees every
-                    // visible peek actually shows its own photo.
+                    // loading all of them is cheap — but it does mean all 9
+                    // hit Wikimedia at once, which is why this is
+                    // RetryImage (see that file) rather than plain Image:
+                    // verified live that eager-loading this many at once
+                    // reliably 429s several of them, and without a retry
+                    // they'd stay permanently broken instead of recovering
+                    // once the rate limit window passes.
                     loading="eager"
                     sizes="(min-width: 768px) 352px, 90vw"
                     className="select-none object-cover"
@@ -363,7 +370,15 @@ export function CarouselStack({ items, selectedIds, onToggleSelect }: CarouselSt
         </button>
       </div>
 
-      <div className="flex items-center gap-2">
+      {/*
+        `relative z-10`: the circular 3D stage above has no overflow
+        clipping (peek cards are meant to spread past its own box during
+        the ring transform), so without an explicit stacking priority here
+        a peek card mid-transition could visually paint over these dots —
+        this guarantees they always win regardless of how far a card's
+        transform extends beyond the stage.
+      */}
+      <div className="relative z-10 flex items-center gap-2">
         {items.map((item, i) => (
           // The button itself is a real 24px (WCAG AA minimum) flex item —
           // not just the tiny visual dot — so the tap target is comfortably
