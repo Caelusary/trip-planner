@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
+import { RetryImage } from "@/components/RetryImage";
 import type { CarouselItem } from "./types";
 
 // Full-screen detail view opened by the "i" info icon on any card. Instead
@@ -135,7 +135,7 @@ export function AttractionMorphView({
         </button>
 
         <div className="relative h-64 w-full shrink-0 overflow-hidden sm:h-80">
-          <Image
+          <RetryImage
             src={item.image}
             alt={item.name}
             fill
@@ -165,7 +165,7 @@ export function AttractionMorphView({
               {item.activities.map((activity) => (
                 <div key={activity.name} className="overflow-hidden rounded-xl bg-white/5">
                   <div className="relative h-28 w-full overflow-hidden sm:h-32">
-                    <Image
+                    <RetryImage
                       src={activity.image}
                       alt={activity.name}
                       fill
@@ -175,7 +175,9 @@ export function AttractionMorphView({
                       // here either (verified live, stuck at
                       // `complete: false` indefinitely). At most 3-5
                       // activities ever render per attraction, so eagerly
-                      // loading all of them is cheap.
+                      // loading all of them is cheap — RetryImage (not
+                      // plain Image) covers the resulting Wikimedia 429s
+                      // the same way as CarouselStack's peek cards.
                       loading="eager"
                       className="object-cover"
                     />
