@@ -10,6 +10,11 @@ import { TAB_DIRECTION_KEY } from "@/components/SidebarNav";
  * back to no animation when there's no recorded direction (first load,
  * "Plan a trip", "Back to trips", or any other non-tab navigation) so only
  * genuine tab-to-tab switches get the animated treatment.
+ *
+ * Deliberately independent of data-fetch timing: this animates as soon as
+ * it mounts, whether the trip list behind its Suspense boundary is ready
+ * yet or not — see app/globals.css for why that matters here.
+ */
 export function TabPanelTransition({ children }: { children: React.ReactNode }) {
   const [animationClass, setAnimationClass] = useState("");
 
