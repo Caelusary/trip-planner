@@ -19,11 +19,6 @@ interface CityAutocompleteProps {
 const DEBOUNCE_MS = 250;
 const MIN_QUERY_LENGTH = 2;
 
-/**
- * Plain text input for a city name — the server still geocodes whatever
- * text is submitted, so picking a suggestion is a convenience, not a
- * requirement (freeform text still works exactly as before).
- */
 export function CityAutocomplete({
   name,
   placeholder,

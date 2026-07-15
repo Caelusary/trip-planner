@@ -130,11 +130,6 @@ export function CarouselStack({ items, selectedIds, onToggleSelect }: CarouselSt
     setDragPx(0);
 
     if (Math.abs(delta) < TAP_MAX_PX) {
-      // Tapping the card itself just... does nothing further (it's already
-      // showing everything at a glance); it no longer jumps to the plan-a-
-      // trip form. That jump-and-autofill now only happens from "Add to
-      // Trip" below, which is the actual point where the user has expressed
-      // intent to plan a trip here.
       return;
     }
     if (delta <= -DRAG_COMMIT_PX) step(1);
