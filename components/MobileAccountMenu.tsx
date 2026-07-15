@@ -6,24 +6,11 @@ import Link from "next/link";
 import { logout } from "@/actions/auth";
 import { SubmitButton } from "@/components/SubmitButton";
 
-/**
- * Mobile-only stand-in for the desktop sidebar's profile card: a compact
- * avatar button that discloses email + "Plan a trip" + "Log out" in a
- * small panel. Plain useState (not the experimental ViewTransition/
- * startViewTransition APIs this app deliberately avoids elsewhere) — this
- * is ordinary React state, so it's unaffected by that constraint.
- * Auto-closes on route change and Escape; the transparent full-screen
- * button behind the panel closes it on outside click/tap.
- */
 export function MobileAccountMenu({ email }: { email: string | null }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const initial = (email ?? "?").trim().charAt(0).toUpperCase() || "?";
 
-  // Close on route change. Adjusting state directly during render (React's
-  // recommended pattern for "reset state when a prop changes") rather than
-  // in an effect — an effect here would fire *after* the new route's first
-  // paint, letting the stale-route menu flash open for a frame.
   const [menuPathname, setMenuPathname] = useState(pathname);
   if (pathname !== menuPathname) {
     setMenuPathname(pathname);

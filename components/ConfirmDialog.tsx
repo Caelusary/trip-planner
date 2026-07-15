@@ -12,11 +12,6 @@ interface ConfirmDialogProps {
   onCancel: () => void;
 }
 
-/**
- * Generic confirm/cancel modal for irreversible actions. Traps focus while
- * open, restores it to whatever triggered the dialog on close, and closes
- * on Escape or a backdrop click.
- */
 export function ConfirmDialog({
   title,
   description,
