@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useState, useEffect } from "react";
 import { CURRENCIES, currencySymbol, fromUSD, toUSD, type CurrencyCode } from "@/lib/currency";
 
 interface BudgetRangeUSD {
@@ -52,18 +52,23 @@ function positionToUsd(position: number): number {
  * the same underlying selection instead of resetting it.
  */
 export function BudgetFilter({
-  datasetRangeUSD,
-  valueUSD,
-  onChangeUSD,
-  matchCount,
-  totalCount,
-}: BudgetFilterProps) {
+                               datasetRangeUSD,
+                               valueUSD,
+                               onChangeUSD,
+                               matchCount,
+                               totalCount,
+                             }: BudgetFilterProps) {
   const [currency, setCurrency] = useState<CurrencyCode>("USD");
   const [minText, setMinText] = useState("");
   const [maxText, setMaxText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const minId = useId();
   const maxId = useId();
+
+  // Track editing state
+  const [isEditingMin, setIsEditingMin] = useState(false);
+  const [isEditingMax, setIsEditingMax] = useState(false);
+  const [isDragging, setIsDragging] = useState<"min" | "max" | null>(null);
 
   // Fixed track ceiling, converted to the display currency — used only as
   // the fallback when a text field is left blank (a blank Max means "no
@@ -75,29 +80,18 @@ export function BudgetFilter({
   const sliderMinDisplay = Math.round(fromUSD(valueUSD.min, currency));
   const sliderMaxDisplay = Math.round(fromUSD(valueUSD.max, currency));
 
-  // Mirrors the text inputs to the committed range whenever it moves for a
-  // reason OTHER than typing in these fields — a slider drag, a currency
-  // switch, or the dataset itself changing (new country). A successful
-  // commit from typing round-trips back to the same number, so this never
-  // fights the user mid-keystroke; it only ever corrects the display after
-  // an external change or snaps back after an invalid entry is abandoned.
-  // Comparing during render (rather than in an effect) applies the
-  // correction before paint instead of one frame after it.
-  const [mirrored, setMirrored] = useState({
-    min: sliderMinDisplay,
-    max: sliderMaxDisplay,
-    currency,
-  });
-  if (
-    mirrored.min !== sliderMinDisplay ||
-    mirrored.max !== sliderMaxDisplay ||
-    mirrored.currency !== currency
-  ) {
-    setMirrored({ min: sliderMinDisplay, max: sliderMaxDisplay, currency });
-    setMinText(String(sliderMinDisplay));
-    setMaxText(String(sliderMaxDisplay));
-    setError(null);
-  }
+  // Update text fields when external changes occur
+  useEffect(() => {
+    if (!isEditingMin && !isEditingMax) {
+      setMinText(String(sliderMinDisplay));
+      setMaxText(String(sliderMaxDisplay));
+      setError(null);
+    }
+  }, [sliderMinDisplay, sliderMaxDisplay, currency, isEditingMin, isEditingMax]);
+
+  // Check if thumbs are close to determine z-index
+  const thumbsAreClose = Math.abs(posMax - posMin) < 20;
+  const minOnTop = thumbsAreClose ? true : posMin > posMax;
 
   function commitUSD(nextMinUSD: number, nextMaxUSD: number) {
     if (nextMinUSD < 0 || nextMaxUSD < 0) {
@@ -124,7 +118,7 @@ export function BudgetFilter({
     if (minTrim === "" && maxTrim === "") {
       setError(null);
       onChangeUSD(datasetRangeUSD);
-      // Set directly rather than relying on the mirror effect: if the reset
+      // Set directly rather than relying on the effect: if the reset
       // range happens to numerically equal the range already applied, the
       // effect never fires (nothing changed), leaving the fields stuck
       // blank instead of showing the restored default numbers.
@@ -147,118 +141,192 @@ export function BudgetFilter({
   // values are always in position-space (0–1000), converted straight to USD
   // — no currency round-trip needed since the track itself is USD-native.
   function handleSlider(which: "min" | "max", rawPosition: number) {
+    setIsDragging(which);
     const usd = positionToUsd(rawPosition);
     if (which === "min") commitUSD(Math.min(usd, valueUSD.max), valueUSD.max);
     else commitUSD(valueUSD.min, Math.max(usd, valueUSD.min));
   }
 
+  const handleDragEnd = () => setIsDragging(null);
+
   const fillLeftPct = (posMin / POSITION_MAX) * 100;
   const fillRightPct = (posMax / POSITION_MAX) * 100;
-  // Whichever thumb is closer to the right edge normally sits on top so it
-  // stays grabbable; but once the two thumbs are within reach of each other
-  // near the top of the range, the min thumb needs priority or it becomes
-  // unreachable underneath max.
-  const minOnTop = posMin > POSITION_MAX * 0.5;
   const symbol = currencySymbol(currency);
 
+  // Format value for display on thumbs
+  const formatValue = (usd: number) => {
+    return `${symbol}${Math.round(fromUSD(usd, currency)).toLocaleString()}`;
+  };
+
   return (
-    <div className="glass-card flex w-full max-w-xs flex-col gap-3 p-4">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-semibold tracking-wide text-white/60 uppercase">Budget</p>
-        <select
-          value={currency}
-          onChange={(event) => setCurrency(event.target.value as CurrencyCode)}
-          className="glass-input cursor-pointer px-2 py-1 text-xs"
-          aria-label="Currency"
+      <div className="glass-card flex w-full max-w-xs flex-col gap-3 p-4">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs font-semibold tracking-wide text-white/60 uppercase">Budget</p>
+          <select
+              value={currency}
+              onChange={(event) => setCurrency(event.target.value as CurrencyCode)}
+              className="glass-input cursor-pointer px-2 py-1 text-xs"
+              aria-label="Currency"
+          >
+            {CURRENCIES.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.code} · {c.symbol}
+                </option>
+            ))}
+          </select>
+        </div>
+
+        <div
+            className="range-slider relative h-6 w-full touch-none select-none"
+            onMouseDown={(e) => {
+              if (e.target.closest('input[type="range"]')) {
+                document.body.style.userSelect = 'none';
+              }
+            }}
+            onMouseUp={() => {
+              document.body.style.userSelect = '';
+            }}
         >
-          {CURRENCIES.map((c) => (
-            <option key={c.code} value={c.code}>
-              {c.code} · {c.symbol}
-            </option>
-          ))}
-        </select>
-      </div>
+          <div className="range-track absolute top-1/2 h-1 w-full -translate-y-1/2 rounded-full bg-white/10" />
+          <div
+              className="range-fill absolute top-1/2 h-1 -translate-y-1/2 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-150 ease-out"
+              style={{
+                left: `${fillLeftPct}%`,
+                right: `${100 - fillRightPct}%`,
+              }}
+          />
 
-      <div className="range-slider">
-        <div className="range-track" />
-        <div className="range-fill" style={{ left: `${fillLeftPct}%`, right: `${100 - fillRightPct}%` }} />
-        <input
-          type="range"
-          min={0}
-          max={POSITION_MAX}
-          value={posMin}
-          onChange={(event) => handleSlider("min", Number(event.target.value))}
-          style={{ zIndex: minOnTop ? 5 : 3 }}
-          aria-label="Minimum budget"
-        />
-        <input
-          type="range"
-          min={0}
-          max={POSITION_MAX}
-          value={posMax}
-          onChange={(event) => handleSlider("max", Number(event.target.value))}
-          style={{ zIndex: minOnTop ? 3 : 5 }}
-          aria-label="Maximum budget"
-        />
-      </div>
-      <div className="-mt-1 flex justify-between text-[10px] text-white/50">
-        <span>{symbol}0</span>
-        <span>{symbol}{Math.round(fromUSD(VALUE_MID_USD, currency)).toLocaleString()}</span>
-        <span>{symbol}{trackBoundsMax.toLocaleString()}</span>
-      </div>
+          {/* Min Thumb with label */}
+          <div className="relative h-full w-full">
+            <input
+                type="range"
+                min={0}
+                max={POSITION_MAX}
+                value={posMin}
+                onChange={(event) => handleSlider("min", Number(event.target.value))}
+                onMouseUp={handleDragEnd}
+                onTouchEnd={handleDragEnd}
+                style={{ zIndex: minOnTop ? 5 : 3 }}
+                aria-label="Minimum budget"
+                step={1}
+                className="absolute top-1/2 h-4 w-full -translate-y-1/2 appearance-none bg-transparent [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:bg-gradient-to-br [&::-webkit-slider-thumb]:from-blue-500 [&::-webkit-slider-thumb]:to-purple-500 [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:transition-transform [&:active::-webkit-slider-thumb]:cursor-grabbing [&:active::-webkit-slider-thumb]:scale-110 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:cursor-grab [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:bg-gradient-to-br [&::-moz-range-thumb]:from-blue-500 [&::-moz-range-thumb]:to-purple-500 [&::-moz-range-thumb]:shadow-lg"
+            />
+            {isDragging === "min" && (
+                <div
+                    className="absolute -top-8 left-1/2 -translate-x-1/2 rounded bg-black/80 px-2 py-0.5 text-xs text-white/90 backdrop-blur-sm whitespace-nowrap"
+                    style={{ pointerEvents: 'none' }}
+                >
+                  {formatValue(valueUSD.min)}
+                </div>
+            )}
+          </div>
 
-      <div className="flex items-center gap-2">
-        <label htmlFor={minId} className="flex flex-1 flex-col gap-1 text-[11px] text-white/60">
-          Min
-          <div className="glass-input flex items-center gap-1 px-3 py-2 text-sm">
+          {/* Max Thumb with label */}
+          <div className="relative h-full w-full">
+            <input
+                type="range"
+                min={0}
+                max={POSITION_MAX}
+                value={posMax}
+                onChange={(event) => handleSlider("max", Number(event.target.value))}
+                onMouseUp={handleDragEnd}
+                onTouchEnd={handleDragEnd}
+                style={{ zIndex: minOnTop ? 3 : 5 }}
+                aria-label="Maximum budget"
+                step={1}
+                className="absolute top-1/2 h-4 w-full -translate-y-1/2 appearance-none bg-transparent [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:bg-gradient-to-br [&::-webkit-slider-thumb]:from-blue-500 [&::-webkit-slider-thumb]:to-purple-500 [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:transition-transform [&:active::-webkit-slider-thumb]:cursor-grabbing [&:active::-webkit-slider-thumb]:scale-110 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:cursor-grab [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:bg-gradient-to-br [&::-moz-range-thumb]:from-blue-500 [&::-moz-range-thumb]:to-purple-500 [&::-moz-range-thumb]:shadow-lg"
+            />
+            {isDragging === "max" && (
+                <div
+                    className="absolute -top-8 left-1/2 -translate-x-1/2 rounded bg-black/80 px-2 py-0.5 text-xs text-white/90 backdrop-blur-sm whitespace-nowrap"
+                    style={{ pointerEvents: 'none' }}
+                >
+                  {formatValue(valueUSD.max)}
+                </div>
+            )}
+          </div>
+        </div>
+
+        <div className="-mt-1 flex justify-between text-[10px] text-white/50">
+          <span>{symbol}0</span>
+          <span>{symbol}{Math.round(fromUSD(500, currency)).toLocaleString()}</span>
+          <span>{symbol}{Math.round(fromUSD(5000, currency)).toLocaleString()}</span>
+          <span>{symbol}{Math.round(fromUSD(25000, currency)).toLocaleString()}</span>
+          <span>{symbol}{trackBoundsMax.toLocaleString()}</span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <label htmlFor={minId} className="flex flex-1 flex-col gap-1 text-[11px] text-white/60">
+            Min
+            <div className="glass-input flex items-center gap-1 px-3 py-2 text-sm">
             <span className="text-white/50" aria-hidden="true">
               {symbol}
             </span>
-            <input
-              id={minId}
-              type="number"
-              inputMode="numeric"
-              min={0}
-              value={minText}
-              onChange={(event) => handleText("min", event.target.value)}
-              className="w-full min-w-0 bg-transparent outline-none"
-              aria-invalid={error != null}
-            />
-          </div>
-        </label>
-        <span className="mt-4 shrink-0 text-white/30">–</span>
-        <label htmlFor={maxId} className="flex flex-1 flex-col gap-1 text-[11px] text-white/60">
-          Max
-          <div className="glass-input flex items-center gap-1 px-3 py-2 text-sm">
+              <input
+                  id={minId}
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  value={minText}
+                  onChange={(event) => handleText("min", event.target.value)}
+                  onFocus={() => setIsEditingMin(true)}
+                  onBlur={() => {
+                    setIsEditingMin(false);
+                    if (minText.trim() !== "") {
+                      const val = Number(minText);
+                      if (!isNaN(val) && val >= 0) {
+                        commitUSD(toUSD(val, currency), valueUSD.max);
+                      }
+                    }
+                  }}
+                  className="w-full min-w-0 bg-transparent outline-none"
+                  aria-invalid={error != null}
+              />
+            </div>
+          </label>
+          <span className="mt-4 shrink-0 text-white/30">–</span>
+          <label htmlFor={maxId} className="flex flex-1 flex-col gap-1 text-[11px] text-white/60">
+            Max
+            <div className="glass-input flex items-center gap-1 px-3 py-2 text-sm">
             <span className="text-white/50" aria-hidden="true">
               {symbol}
             </span>
-            <input
-              id={maxId}
-              type="number"
-              inputMode="numeric"
-              min={0}
-              value={maxText}
-              onChange={(event) => handleText("max", event.target.value)}
-              className="w-full min-w-0 bg-transparent outline-none"
-              aria-invalid={error != null}
-            />
-          </div>
-        </label>
-      </div>
+              <input
+                  id={maxId}
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  value={maxText}
+                  onChange={(event) => handleText("max", event.target.value)}
+                  onFocus={() => setIsEditingMax(true)}
+                  onBlur={() => {
+                    setIsEditingMax(false);
+                    if (maxText.trim() !== "") {
+                      const val = Number(maxText);
+                      if (!isNaN(val) && val >= 0) {
+                        commitUSD(valueUSD.min, toUSD(val, currency));
+                      }
+                    }
+                  }}
+                  className="w-full min-w-0 bg-transparent outline-none"
+                  aria-invalid={error != null}
+              />
+            </div>
+          </label>
+        </div>
 
-      <div className="flex items-center justify-between gap-2 text-[11px]">
-        {error ? (
-          <p className="text-danger-300" role="alert">
-            {error}
-          </p>
-        ) : (
-          <p className="text-white/50">
-            Showing {matchCount} of {totalCount}
-          </p>
-        )}
-        {currency !== "USD" && <p className="shrink-0 text-white/50">base: USD</p>}
+        <div className="flex items-center justify-between gap-2 text-[11px]">
+          {error ? (
+              <p className="text-danger-300" role="alert">
+                {error}
+              </p>
+          ) : (
+              <p className="text-white/50">
+                Showing {matchCount} of {totalCount}
+              </p>
+          )}
+          {currency !== "USD" && <p className="shrink-0 text-white/50">base: USD</p>}
+        </div>
       </div>
-    </div>
   );
 }
