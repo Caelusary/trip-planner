@@ -268,58 +268,11 @@ button:focus-visible {
    (the transition's DOM snapshot is captured before the streamed trip list
    arrives, so there was nothing to animate). This approach doesn't depend
    on data-fetch timing at all: the sidebar nav (components/SidebarNav.tsx)
-   drives its active tab's depth/position via a plain CSS `transition`, and
-   the tab content (components/TabPanelTransition.tsx) plays a fixed
-   one-shot `animation` the instant it mounts, regardless of how long the
-   fetch behind it took. Both are covered by the universal
-   prefers-reduced-motion block above (real DOM elements/classes, not
-   pseudo-elements, so no separate override is needed here). */
-
-/* ---------- Sidebar nav: circular-cylinder depth (components/SidebarNav.tsx) ---------- */
-/* Desktop-only 3D treatment for the "Upcoming trips" / "Trip history"
-   sidebar rail: `perspective` on the outer container plus
-   `transform-style: preserve-3d` on the track makes each item's own
-   `rotateX`/`translateZ` (set inline per item, since there are only two
-   fixed states — active vs. resting — no pixel measurement needed unlike
-   the old horizontal underline) read as points on a lightly rotating
-   cylinder, tilting the non-active tab away from the viewer while the
-   active one rotates flat and steps forward. Depth is sold entirely via
-   transform + background/border, never by dimming text below the
-   4.5:1 contrast minimum — the resting (non-active) tab keeps the same
-   text-white/70 already used for inactive text elsewhere in this app.
-   The two aria-hidden "ghost" slivers above/below are purely decorative
-   (no text, so no contrast obligation) and exist only to suggest the
-   cylinder's surface continuing past the two real stops. Transitions are
-   declared here as real CSS (not inline-only), so the universal
-   prefers-reduced-motion override above still applies. */
-.sidebar-cylinder {
-  perspective: 1000px;
-}
-.sidebar-cylinder-track {
-  transform-style: preserve-3d;
-}
-.sidebar-nav-item {
-  transform-origin: center;
-  transition:
-    transform 320ms cubic-bezier(0.16, 1, 0.3, 1),
-    background-color 220ms cubic-bezier(0.16, 1, 0.3, 1),
-    border-color 220ms cubic-bezier(0.16, 1, 0.3, 1),
-    color 220ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-.sidebar-nav-ghost {
-  display: block;
-  height: 0.4rem;
-  border-radius: 9999px;
-  background: color-mix(in oklch, white 16%, transparent);
-  transform-style: preserve-3d;
-  opacity: 0.4;
-}
-.sidebar-nav-ghost--top {
-  transform: rotateX(32deg) translateZ(-26px) scale(0.7);
-}
-.sidebar-nav-ghost--bottom {
-  transform: rotateX(-32deg) translateZ(-26px) scale(0.7);
-}
+   is a plain flat nav bar (active state via `transition-colors`, already
+   covered by Tailwind's own `transition` utility), and the tab content
+   (components/TabPanelTransition.tsx) plays a fixed one-shot `animation`
+   the instant it mounts, regardless of how long the fetch behind it took.
+   Covered by the universal prefers-reduced-motion block above. */
 
 @keyframes tab-panel-enter-forward {
   from {
