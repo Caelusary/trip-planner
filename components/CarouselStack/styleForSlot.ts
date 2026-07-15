@@ -1,21 +1,33 @@
-// The primary card keeps a fixed max width (22rem, see `max-w-[22rem]` on
-// each card in CarouselStack.tsx) while the stage around it is now much
-// wider (matches the page's max-w-3xl content column), so there's real room
-// for peek cards to spread out horizontally instead of huddling right
-// behind the primary card's edges.
-//
-// Symmetric window: THREE visible peek cards now stack behind the primary
-// card on EACH side (slots ±1, ±2, ±3 — up from two), plus one invisible
-// pre-stage per side (±4) so a fourth consecutive step in either direction
-// slides smoothly into place instead of popping into existence. The deck
-// always reads as balanced — same depth left and right — instead of
-// favoring one direction.
+// Cover Flow, with progressive rotation — matches the reference image the
+// user pointed to: cards overlap in a receding, darkening stack (Cover
+// Flow's classic look) AND each successive card is tilted further than the
+// one before it, so the deck visibly *curves* toward the back instead of
+// every side card sharing one flat angle. An earlier version used one
+// constant tilt per side (true to Cover Flow, but read as a fixed fan, not
+// something "going around") — this keeps Cover Flow's stacking/overlap/
+// darkening but swaps in a per-depth angle so it reads as wrapping around
+// a curve.
 export const SLOTS_BEHIND = 4;
 export const SLOTS_AHEAD = 4;
-// Primary card width stays capped at 22rem (see the `max-w-[22rem]` on each
-// card in CarouselStack.tsx) — fixed, not fluid to the (much wider) stage —
-// so widening the stage spreads the peeking cards apart instead of
-// stretching the front card itself into an oversized landscape shape.
+// Outermost ring position's tilt. Kept under 90deg deliberately: past 90,
+// `rotateY` shows a card's mirrored backside (no separate back face is
+// defined here), flipping its text into unreadable mirror noise. 78deg
+// stays just shy of that while still reading as "nearly edge-on, curving
+// out of view" at the deepest slot.
+const MAX_TILT_DEG = 78;
+const TILT_STEP_DEG = MAX_TILT_DEG / SLOTS_AHEAD;
+// Horizontal step between consecutively stacked cards on the same side, in
+// cqw (percent of the stage's own current width, via the
+// `container-type: inline-size` set on the stage element) — smaller than a
+// card's own rendered width so each one visibly overlaps its neighbor
+// (stacked deck, not separated tiles), but wide enough that a real portion
+// of each card shows past the one in front of it. Verified live that the
+// original 11/15 values here read as "cramped" — the first peek card sat
+// almost entirely hidden behind the primary card's own half-width — these
+// are roughly 60% wider.
+const STEP_CQW = 17;
+// First side card's offset from center.
+const BASE_OFFSET_CQW = 23;
 
 export interface SlotStyle {
   transform: string;
@@ -25,69 +37,45 @@ export interface SlotStyle {
   filter?: string;
 }
 
-// Every card sits at `left: 50%` of the (wide) stage and is re-centered via
-// the `translate(-50%, ...)` baked into every branch below; the horizontal
-// offset added on top of that is what spreads each slot out from the
-// primary card. That offset is expressed in `cqw` (percent of the STAGE's
-// own current width, via the `container-type: inline-size` set on the
-// stage element in CarouselStack.tsx) rather than a fixed px value — so the
-// spread scales down proportionally on a narrow phone-width stage instead
-// of staying a fixed pixel distance and overflowing past a much narrower
-// box. The cqw values below are tuned so they land at the same pixel
-// spread (~64/126/182/224px) at the stage's full max-w-3xl (768px) width.
-// Positive slots (ahead, to the right) and negative slots (behind, to the
-// left) are exact mirrors of each other via `side`, so the stack is always
-// visually symmetric around the primary card.
 export function styleForSlot(slot: number, dragPx: number): SlotStyle {
   const magnitude = Math.abs(slot);
   const side = slot < 0 ? -1 : 1;
-  const corner = side < 0 ? "bottom left" : "bottom right";
+
+  // Nearer-to-center cards must draw over farther ones on the same side
+  // (they visually overlap by design, see STEP_CQW above) — magnitude-based
+  // zIndex, unaffected by the 3D transform itself since these are
+  // independently-positioned absolute elements, not one shared
+  // `preserve-3d` group.
+  const zIndex = 40 - magnitude;
 
   if (magnitude === 0) {
     return {
       transform: `translate(calc(-50% + ${dragPx}px), 0) rotate(${dragPx / 24}deg)`,
       transformOrigin: "center",
       opacity: 1,
-      zIndex: 40,
+      zIndex,
     };
   }
-  if (magnitude === 1) {
-    return {
-      transform: `translate(calc(-50% + ${side * 8.3}cqw), 16px) scale(0.9)`,
-      transformOrigin: corner,
-      opacity: 1,
-      zIndex: 30,
-    };
-  }
-  if (magnitude === 2) {
-    // No dimming/blur here — every visible slot stays fully opaque and
-    // sharp so the deck reads as a continuous stack of real cards, not
-    // cards fading in and out at the edges.
-    return {
-      transform: `translate(calc(-50% + ${side * 16.4}cqw), 30px) scale(0.78)`,
-      transformOrigin: corner,
-      opacity: 1,
-      zIndex: 20,
-    };
-  }
-  if (magnitude === 3) {
-    // Third peek, newly visible now that the stage is wide enough to show
-    // it without crowding the primary card — same fully-opaque treatment
-    // as slots 1 and 2 so the extra depth reads as more stack, not a fade.
-    return {
-      transform: `translate(calc(-50% + ${side * 23.7}cqw), 42px) scale(0.66)`,
-      transformOrigin: corner,
-      opacity: 1,
-      zIndex: 10,
-    };
-  }
-  // magnitude === 4: pre-staged one step beyond the third peek — fully
-  // invisible, exists only so the next swipe in that direction has somewhere
-  // to slide in from instead of popping into place.
+
+  const offsetCqw = BASE_OFFSET_CQW + (magnitude - 1) * STEP_CQW;
+  const tiltDeg = magnitude * TILT_STEP_DEG;
+  const recedePx = magnitude * 46;
+  const scale = Math.max(0.56, 1 - magnitude * 0.095);
+  // Darkens toward the back, floored well above black so the outermost
+  // ring position still visibly reads as "a card", not a void — matches
+  // the reference image's near-but-not-fully-black outer edge.
+  const brightness = Math.max(0.4, 1 - magnitude * 0.15);
+
   return {
-    transform: `translate(calc(-50% + ${side * 29}cqw), 52px) scale(0.56)`,
-    transformOrigin: corner,
-    opacity: 0,
-    zIndex: 0,
+    // translate/translateZ position the card first (independent of
+    // rotation); rotateY comes last so it tilts each card in place around
+    // its own center rather than further displacing it — that's what lets
+    // STEP_CQW's overlap and the progressive tilt both hold at once
+    // instead of fighting each other.
+    transform: `translate(calc(-50% + ${side * offsetCqw}cqw), 0) translateZ(${-recedePx}px) rotateY(${side * tiltDeg}deg) scale(${scale})`,
+    transformOrigin: "center",
+    opacity: 1,
+    zIndex,
+    filter: `brightness(${brightness})`,
   };
 }
