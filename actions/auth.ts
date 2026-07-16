@@ -42,6 +42,27 @@ export async function login(formData: FormData) {
   redirect("/trips");
 }
 
+export async function resendConfirmation(formData: FormData) {
+  const clientId = clientKeyFromHeaders(await headers());
+  if (isRateLimited(`resend:${clientId}`, SIGNUP_ATTEMPTS_PER_MINUTE)) {
+    redirect("/login?error=rate_limited");
+  }
+
+  const email = formData.get("email");
+  if (typeof email !== "string" || !EMAIL_RE.test(email.trim())) {
+    redirect("/login?error=invalid_input");
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resend({ type: "signup", email: email.trim() });
+
+  if (error) {
+    redirect(`/login?error=${authErrorCode(error)}`);
+  }
+
+  redirect("/login?notice=confirmation_resent");
+}
+
 export async function signup(formData: FormData) {
   const clientId = clientKeyFromHeaders(await headers());
   if (isRateLimited(`signup:${clientId}`, SIGNUP_ATTEMPTS_PER_MINUTE)) {

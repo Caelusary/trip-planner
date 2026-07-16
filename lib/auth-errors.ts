@@ -26,3 +26,13 @@ export function authErrorMessage(code: string | undefined): string {
   if (!code) return DEFAULT_MESSAGE;
   return AUTH_ERROR_MESSAGES[code] ?? DEFAULT_MESSAGE;
 }
+
+// Same allowlist principle as AUTH_ERROR_MESSAGES above, for non-error banners.
+const NOTICE_MESSAGES: Record<string, string> = {
+  confirmation_resent: "Confirmation email resent — check your inbox (and spam folder).",
+};
+
+export function authNoticeMessage(code: string | undefined): string | null {
+  if (!code) return null;
+  return NOTICE_MESSAGES[code] ?? null;
+}
