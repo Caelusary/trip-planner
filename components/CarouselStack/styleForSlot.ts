@@ -28,6 +28,11 @@ const TILT_STEP_DEG = MAX_TILT_DEG / SLOTS_AHEAD;
 const STEP_CQW = 17;
 // First side card's offset from center.
 const BASE_OFFSET_CQW = 23;
+// A constant tilt applied to every card (not per-depth like TILT_STEP_DEG
+// above) so the whole deck reads as viewed from slightly above rather than
+// dead-on — the "overhead carousel" look. Small enough that card text stays
+// fully legible; this is a viewing-angle cue, not a real perspective shift.
+const OVERHEAD_TILT_DEG = 7;
 
 export interface SlotStyle {
   transform: string;
@@ -50,7 +55,7 @@ export function styleForSlot(slot: number, dragPx: number): SlotStyle {
 
   if (magnitude === 0) {
     return {
-      transform: `translate(calc(-50% + ${dragPx}px), 0) rotate(${dragPx / 24}deg)`,
+      transform: `translate(calc(-50% + ${dragPx}px), 0) rotateX(${OVERHEAD_TILT_DEG}deg) rotate(${dragPx / 24}deg)`,
       transformOrigin: "center",
       opacity: 1,
       zIndex,
@@ -72,7 +77,7 @@ export function styleForSlot(slot: number, dragPx: number): SlotStyle {
     // its own center rather than further displacing it — that's what lets
     // STEP_CQW's overlap and the progressive tilt both hold at once
     // instead of fighting each other.
-    transform: `translate(calc(-50% + ${side * offsetCqw}cqw), 0) translateZ(${-recedePx}px) rotateY(${side * tiltDeg}deg) scale(${scale})`,
+    transform: `translate(calc(-50% + ${side * offsetCqw}cqw), 0) translateZ(${-recedePx}px) rotateX(${OVERHEAD_TILT_DEG}deg) rotateY(${side * tiltDeg}deg) scale(${scale})`,
     transformOrigin: "center",
     opacity: 1,
     zIndex,
