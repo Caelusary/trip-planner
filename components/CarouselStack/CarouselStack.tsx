@@ -340,6 +340,30 @@ export function CarouselStack({ items, selectedIds, onToggleSelect }: CarouselSt
 
                   <p className="mt-auto line-clamp-2 text-[11px] text-white/50">{item.description}</p>
                 </div>
+
+                {/*
+                  Glossy floor reflection — a mirrored, fading copy of just
+                  the photo (not the text), matching a classic Cover Flow
+                  "wrapping around a curve" look rather than the flat fan
+                  this deck had before. A plain CSS background-image (not a
+                  second RetryImage) so it doesn't duplicate a real network
+                  request per card — purely decorative, so a slightly
+                  lower-fidelity render is an acceptable trade. Positioned
+                  below the whole card (not directly under the photo) since
+                  the card's own layout has no empty "floor" space of its
+                  own — the stage below has no overflow clipping (see the
+                  comment on the stage `isolate` div) so this is free to
+                  extend past the card's box into that gap.
+                */}
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute top-full left-0 h-16 w-full origin-top -scale-y-100 opacity-30 [-webkit-mask-image:linear-gradient(to_bottom,rgba(0,0,0,0.55),transparent)] [mask-image:linear-gradient(to_bottom,rgba(0,0,0,0.55),transparent)]"
+                  style={{
+                    backgroundImage: `url(${item.image})`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                  }}
+                />
               </div>
             </div>
           );
