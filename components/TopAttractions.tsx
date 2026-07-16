@@ -5,13 +5,14 @@ import {
   attractionsFor,
   COUNTRY_LIST,
   COUNTRY_NAMES,
+  type AttractionCategory,
   type CountryCode,
 } from "@/lib/attractions";
 import { useUserCountry } from "@/lib/useUserCountry";
+import { SAVED_ATTRACTIONS_KEY } from "@/lib/savedAttractions";
 import { CarouselStack, type CarouselItem } from "@/components/CarouselStack";
 import { BudgetFilter } from "@/components/BudgetFilter";
-
-const TRIP_STORAGE_KEY = "trip-planner:selected-attractions";
+import { CategoryFilter } from "@/components/CategoryFilter";
 
 interface BudgetRangeUSD {
   min: number;
@@ -39,9 +40,17 @@ export function TopAttractions() {
     detect();
   }
 
-  const allAttractions = attractionsFor(country);
+  const [category, setCategory] = useState<AttractionCategory | "All">("All");
+  const allAttractionsUnfiltered = attractionsFor(country);
+  const allAttractions =
+    category === "All"
+      ? allAttractionsUnfiltered
+      : allAttractionsUnfiltered.filter((a) => a.category === category);
 
   const datasetRangeUSD: BudgetRangeUSD = useMemo(() => {
+    // A category can have zero matches in the current country — Math.min/max
+    // of an empty array is +/-Infinity, which would break the slider.
+    if (allAttractions.length === 0) return { min: 0, max: 0 };
     const min = Math.min(...allAttractions.map((a) => a.budgetMin));
     const max = Math.max(...allAttractions.map((a) => a.budgetMax));
     return { min, max };
@@ -70,7 +79,7 @@ export function TopAttractions() {
   // below, which is more moving parts than a one-time hydration read needs.
   useEffect(() => {
     try {
-      const raw = window.localStorage.getItem(TRIP_STORAGE_KEY);
+      const raw = window.localStorage.getItem(SAVED_ATTRACTIONS_KEY);
       // eslint-disable-next-line react-hooks/set-state-in-effect
       if (raw) setSelectedIds(new Set(JSON.parse(raw)));
     } catch {
@@ -79,7 +88,7 @@ export function TopAttractions() {
   }, []);
   useEffect(() => {
     try {
-      window.localStorage.setItem(TRIP_STORAGE_KEY, JSON.stringify([...selectedIds]));
+      window.localStorage.setItem(SAVED_ATTRACTIONS_KEY, JSON.stringify([...selectedIds]));
     } catch {
       // Storage full/unavailable — selections still work for this session.
     }
@@ -109,8 +118,21 @@ export function TopAttractions() {
 
   return (
     <section className="flex flex-col items-center gap-4">
-      <h2 className="font-display w-full max-w-xs text-lg font-semibold">
-        Top Attractions in {COUNTRY_NAMES[country]}
+      <h2 className="font-display flex w-full max-w-xs items-center gap-2 text-lg font-semibold">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.75"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+          className="text-accent-400 h-5 w-5 shrink-0"
+        >
+          <circle cx="12" cy="12" r="9" />
+          <path d="m14.5 9.5-1.8 4.7a1 1 0 0 1-.5.5L7.5 16.5l1.8-4.7a1 1 0 0 1 .5-.5z" />
+        </svg>
+        Explore {COUNTRY_NAMES[country]}
       </h2>
 
       <div className="flex w-full max-w-xs items-center gap-2">
@@ -172,6 +194,8 @@ export function TopAttractions() {
         </p>
       )}
 
+      <CategoryFilter value={category} onChange={setCategory} />
+
       <BudgetFilter
         datasetRangeUSD={datasetRangeUSD}
         valueUSD={valueUSD}
@@ -182,14 +206,14 @@ export function TopAttractions() {
 
       {items.length > 0 ? (
         <CarouselStack
-          key={country}
+          key={`${country}-${category}`}
           items={items}
           selectedIds={selectedIds}
           onToggleSelect={toggleSelect}
         />
       ) : (
         <p className="glass-card w-full max-w-xs p-6 text-center text-sm text-white/70">
-          No attractions match that budget — try a wider range.
+          No attractions match — try a different category or a wider budget.
         </p>
       )}
     </section>
