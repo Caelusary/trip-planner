@@ -4,7 +4,7 @@ interface CurrencyInfo {
   code: CurrencyCode;
   symbol: string;
   label: string;
-  /** Units of this currency per 1 USD. Static, illustrative rates — not live. */
+  /** Units of this currency per 1 USD. Fallback used until/unless a live rate loads — see lib/exchange-rates.ts. */
   perUSD: number;
 }
 
@@ -25,12 +25,15 @@ const RATE_BY_CODE: Record<CurrencyCode, number> = Object.fromEntries(
   CURRENCIES.map((c) => [c.code, c.perUSD]),
 ) as Record<CurrencyCode, number>;
 
-export function fromUSD(amountUSD: number, currency: CurrencyCode): number {
-  return amountUSD * RATE_BY_CODE[currency];
+/** Overrides the static table above for whichever currencies are present — see lib/exchange-rates.ts. */
+export type LiveRates = Partial<Record<CurrencyCode, number>>;
+
+export function fromUSD(amountUSD: number, currency: CurrencyCode, liveRates?: LiveRates): number {
+  return amountUSD * (liveRates?.[currency] ?? RATE_BY_CODE[currency]);
 }
 
-export function toUSD(amount: number, currency: CurrencyCode): number {
-  return amount / RATE_BY_CODE[currency];
+export function toUSD(amount: number, currency: CurrencyCode, liveRates?: LiveRates): number {
+  return amount / (liveRates?.[currency] ?? RATE_BY_CODE[currency]);
 }
 
 export function currencySymbol(currency: CurrencyCode): string {
