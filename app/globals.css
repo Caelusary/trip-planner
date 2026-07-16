@@ -11,10 +11,13 @@
   --color-ink-100: oklch(0.94 0.008 265);
   --color-ink-50: oklch(0.98 0.004 265);
 
-  /* ---------- ACCENT (ember amber — CTAs and emphasis only) ---------- */
-  --color-accent-400: oklch(0.8 0.14 60);
-  --color-accent-500: oklch(0.74 0.16 55);
-  --color-accent-600: oklch(0.64 0.16 48);
+  /* ---------- ACCENT (teal — CTAs and emphasis only) ---------- */
+  --color-accent-400: oklch(0.78 0.12 185);
+  --color-accent-500: oklch(0.7 0.13 185);
+  --color-accent-600: oklch(0.58 0.12 185);
+
+  /* ---------- CORAL (secondary highlight — price/rating badges) ---------- */
+  --color-coral-400: oklch(0.75 0.15 30);
 
   /* ---------- SEMANTIC ---------- */
   --color-danger-300: oklch(0.82 0.08 22);
@@ -59,7 +62,7 @@ body {
     180deg,
     var(--color-ink-950) 0%,
     oklch(0.19 0.03 267) 55%,
-    oklch(0.24 0.06 35) 100%
+    oklch(0.2 0.05 300) 100%
   );
   background-repeat: no-repeat;
 }
