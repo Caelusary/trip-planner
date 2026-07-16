@@ -43,9 +43,26 @@ function HistoryIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+function SavedIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <path d="M12 20.5s-7.5-4.6-9.6-9.3C.9 7.8 3 5 6.1 5c1.9 0 3.4 1 5.9 3.4C14.5 6 16 5 17.9 5 21 5 23.1 7.8 21.6 11.2 19.5 15.9 12 20.5 12 20.5Z" />
+    </svg>
+  );
+}
+
 const TABS = [
   { href: "/trips/upcoming", label: "Upcoming trips", Icon: UpcomingIcon },
   { href: "/trips/history", label: "Trip history", Icon: HistoryIcon },
+  { href: "/trips/saved", label: "Saved", Icon: SavedIcon },
 ] as const;
 
 /**
@@ -110,34 +127,6 @@ export function SidebarNav() {
   );
 }
 
-/**
- * Mobile collapse of the same two tabs: a flat pill segmented control. A
- * cylinder read nearly edge-on in a cramped top bar has no depth left to
- * show, so this intentionally drops the 3D treatment rather than forcing
- * it — same direction-recording as the desktop rail above.
- */
-export function MobileTabBar() {
-  const { activeIndex, recordDirection } = useTripsTabs();
-
-  return (
-    <nav aria-label="Trips" className="flex min-w-0 flex-1 items-center gap-1.5">
-      {TABS.map((tab, index) => {
-        const isActive = index === activeIndex;
-        return (
-          <Link
-            key={tab.href}
-            href={tab.href}
-            onClick={() => recordDirection(index)}
-            aria-current={isActive ? "page" : undefined}
-            className={`flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-full px-2 text-xs font-medium transition-colors duration-200 ${
-              isActive ? "bg-accent-400 text-ink-950" : "text-white/70 hover:bg-white/10 hover:text-white"
-            }`}
-          >
-            <tab.Icon aria-hidden="true" className="h-4 w-4 shrink-0" />
-            <span className="truncate">{tab.label}</span>
-          </Link>
-        );
-      })}
-    </nav>
-  );
-}
+// The mobile equivalent of this nav is now components/BottomNav.tsx (a
+// fixed bottom tab bar) rather than a collapsed version of this same list —
+// see that file for why it's a different, smaller set of destinations.

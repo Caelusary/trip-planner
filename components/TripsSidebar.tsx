@@ -2,8 +2,8 @@ import Link from "next/link";
 import type { SVGProps } from "react";
 import { logout } from "@/actions/auth";
 import { SubmitButton } from "@/components/SubmitButton";
-import { SidebarNav, MobileTabBar } from "@/components/SidebarNav";
-import { MobileAccountMenu } from "@/components/MobileAccountMenu";
+import { SidebarNav } from "@/components/SidebarNav";
+import { BottomNav } from "@/components/BottomNav";
 
 function LogoMark(props: SVGProps<SVGSVGElement>) {
   return (
@@ -93,18 +93,18 @@ export function TripsSidebar({ email }: { email: string | null }) {
         </div>
       </aside>
 
-      {/* ---------- Mobile: single sticky top bar ---------- */}
+      {/* ---------- Mobile: slim logo bar + floating bottom tab bar ---------- */}
       <header className="border-white/10 bg-ink-950/85 sticky top-0 z-20 flex items-center gap-2 border-b px-3 py-2 backdrop-blur-xl md:hidden">
         <Link
           href="/trips"
           aria-label="Trip Planner home"
-          className="flex shrink-0 items-center rounded-md p-1 transition hover:opacity-80"
+          className="flex shrink-0 items-center gap-2 rounded-md p-1 transition hover:opacity-80"
         >
           <LogoMark className="text-accent-400 h-5 w-5" />
+          <span className="font-display text-base font-semibold tracking-tight">Trip Planner</span>
         </Link>
-        <MobileTabBar />
-        <MobileAccountMenu email={email} />
       </header>
+      <BottomNav />
     </>
   );
 }

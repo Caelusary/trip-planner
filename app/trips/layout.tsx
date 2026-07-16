@@ -14,7 +14,11 @@ export default async function TripsLayout({ children }: { children: React.ReactN
   return (
     <div className="flex flex-1 flex-col md:flex-row">
       <TripsSidebar email={user?.email ?? null} />
-      <div className="min-w-0 flex-1 px-4 pb-10 md:px-8 md:py-8">{children}</div>
+      {/* pb-28 (not pb-10) on mobile only — clears the fixed BottomNav (see
+          components/BottomNav.tsx) so it never covers page content like a
+          form's submit button. Overridden by md:py-8 at desktop width,
+          where there's no bottom nav to clear. */}
+      <div className="min-w-0 flex-1 px-4 pb-28 md:px-8 md:py-8">{children}</div>
     </div>
   );
 }
