@@ -2,6 +2,7 @@
 
 import { useId, useState } from "react";
 import { CURRENCIES, currencySymbol, fromUSD, toUSD, type CurrencyCode } from "@/lib/currency";
+import { useLiveExchangeRates } from "@/lib/useLiveExchangeRates";
 
 interface BudgetRangeUSD {
   min: number;
@@ -59,6 +60,10 @@ export function BudgetFilter({
                                totalCount,
                              }: BudgetFilterProps) {
   const [currency, setCurrency] = useState<CurrencyCode>("USD");
+  // Live rates load asynchronously and silently fall back to lib/currency.ts's
+  // static table until they do (or if the fetch fails) — every fromUSD/toUSD
+  // call below passes this through for that reason.
+  const liveRates = useLiveExchangeRates();
   const [minText, setMinText] = useState("");
   const [maxText, setMaxText] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -73,12 +78,12 @@ export function BudgetFilter({
   // Fixed track ceiling, converted to the display currency — used only as
   // the fallback when a text field is left blank (a blank Max means "no
   // upper limit up to the $100k ceiling," not "no filter at all").
-  const trackBoundsMax = Math.round(fromUSD(VALUE_MAX_USD, currency));
+  const trackBoundsMax = Math.round(fromUSD(VALUE_MAX_USD, currency, liveRates ?? undefined));
 
   const posMin = usdToPosition(valueUSD.min);
   const posMax = usdToPosition(valueUSD.max);
-  const sliderMinDisplay = Math.round(fromUSD(valueUSD.min, currency));
-  const sliderMaxDisplay = Math.round(fromUSD(valueUSD.max, currency));
+  const sliderMinDisplay = Math.round(fromUSD(valueUSD.min, currency, liveRates ?? undefined));
+  const sliderMaxDisplay = Math.round(fromUSD(valueUSD.max, currency, liveRates ?? undefined));
 
   // Sync text fields to external changes. Adjusted during render (React's
   // recommended pattern for state derived from props) rather than in a
@@ -129,8 +134,8 @@ export function BudgetFilter({
       // range happens to numerically equal the range already applied, the
       // effect never fires (nothing changed), leaving the fields stuck
       // blank instead of showing the restored default numbers.
-      setMinText(String(Math.round(fromUSD(datasetRangeUSD.min, currency))));
-      setMaxText(String(Math.round(fromUSD(datasetRangeUSD.max, currency))));
+      setMinText(String(Math.round(fromUSD(datasetRangeUSD.min, currency, liveRates ?? undefined))));
+      setMaxText(String(Math.round(fromUSD(datasetRangeUSD.max, currency, liveRates ?? undefined))));
       return;
     }
 
@@ -140,7 +145,7 @@ export function BudgetFilter({
       setError("Enter a valid number.");
       return;
     }
-    commitUSD(toUSD(nextMin, currency), toUSD(nextMax, currency));
+    commitUSD(toUSD(nextMin, currency, liveRates ?? undefined), toUSD(nextMax, currency, liveRates ?? undefined));
   }
 
   // Dragging a thumb past its counterpart clamps to it rather than crossing
@@ -162,7 +167,7 @@ export function BudgetFilter({
 
   // Format value for display on thumbs
   const formatValue = (usd: number) => {
-    return `${symbol}${Math.round(fromUSD(usd, currency)).toLocaleString()}`;
+    return `${symbol}${Math.round(fromUSD(usd, currency, liveRates ?? undefined)).toLocaleString()}`;
   };
 
   return (
@@ -256,9 +261,9 @@ export function BudgetFilter({
 
         <div className="-mt-1 flex justify-between text-[10px] text-white/50">
           <span>{symbol}0</span>
-          <span>{symbol}{Math.round(fromUSD(500, currency)).toLocaleString()}</span>
-          <span>{symbol}{Math.round(fromUSD(5000, currency)).toLocaleString()}</span>
-          <span>{symbol}{Math.round(fromUSD(25000, currency)).toLocaleString()}</span>
+          <span>{symbol}{Math.round(fromUSD(500, currency, liveRates ?? undefined)).toLocaleString()}</span>
+          <span>{symbol}{Math.round(fromUSD(5000, currency, liveRates ?? undefined)).toLocaleString()}</span>
+          <span>{symbol}{Math.round(fromUSD(25000, currency, liveRates ?? undefined)).toLocaleString()}</span>
           <span>{symbol}{trackBoundsMax.toLocaleString()}</span>
         </div>
 
@@ -282,7 +287,7 @@ export function BudgetFilter({
                     if (minText.trim() !== "") {
                       const val = Number(minText);
                       if (!isNaN(val) && val >= 0) {
-                        commitUSD(toUSD(val, currency), valueUSD.max);
+                        commitUSD(toUSD(val, currency, liveRates ?? undefined), valueUSD.max);
                       }
                     }
                   }}
@@ -311,7 +316,7 @@ export function BudgetFilter({
                     if (maxText.trim() !== "") {
                       const val = Number(maxText);
                       if (!isNaN(val) && val >= 0) {
-                        commitUSD(valueUSD.min, toUSD(val, currency));
+                        commitUSD(valueUSD.min, toUSD(val, currency, liveRates ?? undefined));
                       }
                     }
                   }}
