@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, useEffect } from "react";
+import { useId, useState } from "react";
 import { CURRENCIES, currencySymbol, fromUSD, toUSD, type CurrencyCode } from "@/lib/currency";
 
 interface BudgetRangeUSD {
@@ -80,14 +80,21 @@ export function BudgetFilter({
   const sliderMinDisplay = Math.round(fromUSD(valueUSD.min, currency));
   const sliderMaxDisplay = Math.round(fromUSD(valueUSD.max, currency));
 
-  // Update text fields when external changes occur
-  useEffect(() => {
-    if (!isEditingMin && !isEditingMax) {
-      setMinText(String(sliderMinDisplay));
-      setMaxText(String(sliderMaxDisplay));
-      setError(null);
-    }
-  }, [sliderMinDisplay, sliderMaxDisplay, currency, isEditingMin, isEditingMax]);
+  // Sync text fields to external changes. Adjusted during render (React's
+  // recommended pattern for state derived from props) rather than in a
+  // useEffect, so the new text appears in the same commit instead of one
+  // frame later.
+  const [syncedDisplay, setSyncedDisplay] = useState({ min: sliderMinDisplay, max: sliderMaxDisplay });
+  if (
+      !isEditingMin &&
+      !isEditingMax &&
+      (syncedDisplay.min !== sliderMinDisplay || syncedDisplay.max !== sliderMaxDisplay)
+  ) {
+    setSyncedDisplay({ min: sliderMinDisplay, max: sliderMaxDisplay });
+    setMinText(String(sliderMinDisplay));
+    setMaxText(String(sliderMaxDisplay));
+    setError(null);
+  }
 
   // Check if thumbs are close to determine z-index
   const thumbsAreClose = Math.abs(posMax - posMin) < 20;
@@ -179,7 +186,7 @@ export function BudgetFilter({
         <div
             className="range-slider relative h-6 w-full touch-none select-none"
             onMouseDown={(e) => {
-              if (e.target.closest('input[type="range"]')) {
+              if ((e.target as HTMLElement).closest('input[type="range"]')) {
                 document.body.style.userSelect = 'none';
               }
             }}

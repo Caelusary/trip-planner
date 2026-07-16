@@ -175,7 +175,7 @@ describe("geocodeCity", () => {
     // Regression test for a real bug: geocoding the bare country name
     // "Japan" (as typed for a trip destination) matched an unrelated town
     // called Japan in Pennsylvania, US, instead of anywhere in Japan.
-    const fetchSpy = vi.fn(async (_url: string) => jsonResponse([]));
+    const fetchSpy = vi.fn(async () => jsonResponse([]));
     vi.stubGlobal("fetch", fetchSpy);
 
     expect(await geocodeCity("Japan")).toBeNull();
@@ -185,7 +185,7 @@ describe("geocodeCity", () => {
   });
 
   it("is case-insensitive when matching a bare country name", async () => {
-    const fetchSpy = vi.fn(async (_url: string) => jsonResponse([]));
+    const fetchSpy = vi.fn(async () => jsonResponse([]));
     vi.stubGlobal("fetch", fetchSpy);
 
     await geocodeCity("japan");
@@ -193,7 +193,7 @@ describe("geocodeCity", () => {
   });
 
   it("does not scope a query that merely contains a country name as part of a longer string", async () => {
-    const fetchSpy = vi.fn(async (_url: string) =>
+    const fetchSpy = vi.fn(async () =>
       jsonResponse([{ name: "Tokyo", country: "JP", lat: 35.68, lon: 139.65 }]),
     );
     vi.stubGlobal("fetch", fetchSpy);
@@ -230,7 +230,7 @@ describe("searchCities", () => {
   });
 
   it("requests the given limit", async () => {
-    const fetchSpy = vi.fn(async (_url: string) => jsonResponse([]));
+    const fetchSpy = vi.fn(async () => jsonResponse([]));
     vi.stubGlobal("fetch", fetchSpy);
 
     await searchCities("Paris", 8);
