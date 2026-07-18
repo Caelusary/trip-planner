@@ -65,6 +65,20 @@ export function formatDateRange(
   return "";
 }
 
+export type TripStatus = "ongoing" | "upcoming" | "past";
+
+/**
+ * Status relative to today (UTC date-only, matching how `start_date`/
+ * `end_date` are stored as Postgres `date` columns — see lib/trips.ts's
+ * todayISODate for why UTC rather than local time).
+ */
+export function tripStatus(startIso: string, endIso: string): TripStatus {
+  const today = new Date().toISOString().slice(0, 10);
+  if (endIso < today) return "past";
+  if (startIso <= today) return "ongoing";
+  return "upcoming";
+}
+
 /**
  * Decorative 3-letter "airport style" code for the boarding-pass card motif —
  * not a real IATA lookup, just the city name's first letters.
