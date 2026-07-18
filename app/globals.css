@@ -57,7 +57,24 @@ body {
      this actually happened, `no-repeat` computed as `repeat` in a real
      browser) since CSS shorthands reset every sub-property they don't
      explicitly set. `background-image` only ever touches the image, so
-     `background-repeat` below is never clobbered by the fallback. */
+     `background-repeat` below is never clobbered by the fallback.
+
+     `background-color` alongside it: `<html>` (see app/layout.tsx) carries
+     Tailwind's `h-full` (`height: 100%`, pinned to exactly one viewport,
+     since percentage heights resolve against the initial containing
+     block) while this element only has `min-height: 100%` — a floor, not
+     a cap, so its box still grows to the full (often much taller) page
+     content. Verified live: past that one-viewport mark, the page showed
+     flat white instead of the gradient continuing — the same "sized to
+     the viewport, not the full page" seam this comment already describes
+     fixing once, just resurfacing through background-to-canvas
+     propagation instead of `background-attachment: fixed` this time. A
+     `background-image` gradient's "auto" sizing is ambiguous in exactly
+     that propagation case; a plain `background-color` has no sizing
+     concept at all — it always fills the full canvas — so it's a
+     guaranteed-safe solid layer under the gradient regardless of that
+     ambiguity. */
+  background-color: var(--color-ink-950);
   background-image: linear-gradient(
     180deg,
     var(--color-ink-950) 0%,
@@ -270,7 +287,7 @@ button:focus-visible {
    <ViewTransition> + Suspense-streamed content never actually animated
    (the transition's DOM snapshot is captured before the streamed trip list
    arrives, so there was nothing to animate). This approach doesn't depend
-   on data-fetch timing at all: the sidebar nav (components/SidebarNav.tsx)
+   on data-fetch timing at all: the nav bar (components/TopNav.tsx)
    is a plain flat nav bar (active state via `transition-colors`, already
    covered by Tailwind's own `transition` utility), and the tab content
    (components/TabPanelTransition.tsx) plays a fixed one-shot `animation`
