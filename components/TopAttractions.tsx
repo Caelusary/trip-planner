@@ -42,10 +42,23 @@ export function TopAttractions() {
 
   const [category, setCategory] = useState<AttractionCategory | "All">("All");
   const allAttractionsUnfiltered = attractionsFor(country);
-  const allAttractions =
-    category === "All"
-      ? allAttractionsUnfiltered
-      : allAttractionsUnfiltered.filter((a) => a.category === category);
+  // Memoized: `.filter()` below builds a new array every call, so without
+  // this, `allAttractions` got a fresh reference on every render whenever a
+  // specific category was selected (the `category === "All"` branch reused
+  // `allAttractionsUnfiltered`'s already-stable reference, but the filtered
+  // branch never did). `datasetRangeUSD`'s own useMemo depends on
+  // `allAttractions`, so that never stabilized either — which fed straight
+  // into the `syncedRangeUSD !== datasetRangeUSD` render-phase check below
+  // always seeing two different objects and calling setValueUSD on every
+  // single render. Verified live: this is what actually threw "Too many
+  // re-renders" the instant a non-"All" category was picked.
+  const allAttractions = useMemo(
+    () =>
+      category === "All"
+        ? allAttractionsUnfiltered
+        : allAttractionsUnfiltered.filter((a) => a.category === category),
+    [allAttractionsUnfiltered, category],
+  );
 
   const datasetRangeUSD: BudgetRangeUSD = useMemo(() => {
     // A category can have zero matches in the current country — Math.min/max
@@ -98,11 +111,15 @@ export function TopAttractions() {
     const filtered = allAttractions.filter(
       (a) => a.budgetMax >= valueUSD.min && a.budgetMin <= valueUSD.max,
     );
+    // Highest-rated first — the deck's own order (not just the "Top N"
+    // caption in CarouselStack.tsx) now reflects rating, so swiping/
+    // clicking through actually visits destinations best-to-worst.
+    filtered.sort((a, b) => b.rating - a.rating);
     return filtered.map((a) => {
       const label = `${a.city}, ${a.country}`;
       return {
         ...a,
-        href: `/trips?destination=${encodeURIComponent(label)}#plan-trip`,
+        href: `/trips/plan?destination=${encodeURIComponent(label)}`,
       };
     });
   }, [allAttractions, valueUSD]);
@@ -118,7 +135,16 @@ export function TopAttractions() {
 
   return (
     <section className="flex flex-col items-center gap-4">
-      <h2 className="font-display flex w-full max-w-xs items-center gap-2 text-lg font-semibold">
+      {/* Visually just says "Explore" (see the single row below) — the
+          full "Explore {country}" text still exists for screen readers,
+          as this section's real heading. */}
+      <h2 className="sr-only">Explore {COUNTRY_NAMES[country]}</h2>
+
+      {/* One row: icon, "Explore" label, country dropdown, location button
+          — collapsed from two stacked rows (a heading row, then a separate
+          dropdown+button row) into one, same max-w-xs width as the budget
+          card below it so the two read as a matched pair. */}
+      <div className="flex w-full max-w-xs items-center gap-2">
         <svg
           viewBox="0 0 24 24"
           fill="none"
@@ -132,10 +158,7 @@ export function TopAttractions() {
           <circle cx="12" cy="12" r="9" />
           <path d="m14.5 9.5-1.8 4.7a1 1 0 0 1-.5.5L7.5 16.5l1.8-4.7a1 1 0 0 1 .5-.5z" />
         </svg>
-        Explore {COUNTRY_NAMES[country]}
-      </h2>
-
-      <div className="flex w-full max-w-xs items-center gap-2">
+        <span className="font-display shrink-0 text-sm font-semibold">Explore</span>
         <select
           value={country}
           onChange={(event) => setManualCountry(event.target.value as CountryCode)}
