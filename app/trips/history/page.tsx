@@ -1,5 +1,4 @@
 import { Suspense } from "react";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { fetchPastTrips } from "@/lib/trips";
@@ -32,16 +31,11 @@ export default async function TripHistoryPage() {
 
   return (
     <TabPanelTransition>
-      <div className="mx-auto flex max-w-3xl flex-col gap-6 pt-4">
-        <div className="flex items-center justify-between gap-3">
-          <h1 className="font-display text-lg font-semibold">Trip history</h1>
-          <Link
-            href="/trips"
-            className="text-accent-400 -m-2 shrink-0 rounded-md p-2 text-xs font-medium underline-offset-2 hover:underline"
-          >
-            Back to trips
-          </Link>
-        </div>
+      <div className="mx-auto flex max-w-5xl flex-col gap-6 pt-4">
+        {/* No "back to trips" link here — Tourist attractions is now its
+            own tab in the top nav (see components/TopNav.tsx), so this
+            page doesn't need a page-local copy of that link. */}
+        <h1 className="font-display text-lg font-semibold">Trip history</h1>
         <Suspense fallback={<TripListSkeleton />}>
           <PastTripsList userId={user.id} />
         </Suspense>
