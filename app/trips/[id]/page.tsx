@@ -61,7 +61,7 @@ export default async function TripDetailPage({
   const addStopToTrip = addStop.bind(null, id);
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-8 pt-4">
+    <div className="mx-auto flex max-w-5xl flex-col gap-8 pt-4">
       <section className="glass-card enter flex items-stretch overflow-hidden">
         <div className="ticket-stub flex w-24 shrink-0 flex-col items-center justify-center gap-1 py-4">
           <span className="font-display text-accent-400 text-2xl font-semibold tracking-wide">
