@@ -38,7 +38,7 @@ export default function SavedPage() {
   const saved: Attraction[] = allAttractions().filter((a) => savedIds.has(a.id));
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6 pt-4">
+    <div className="mx-auto flex max-w-5xl flex-col gap-6 pt-4">
       <h1 className="font-display text-xl font-semibold">Saved</h1>
 
       {saved.length === 0 ? (
@@ -73,7 +73,7 @@ export default function SavedPage() {
                 </div>
                 <div className="mt-auto flex items-center justify-between gap-2 pt-2">
                   <Link
-                    href={`/trips?destination=${encodeURIComponent(`${attraction.city}, ${attraction.country}`)}#plan-trip`}
+                    href={`/trips/plan?destination=${encodeURIComponent(`${attraction.city}, ${attraction.country}`)}`}
                     className="text-accent-400 text-xs font-semibold underline-offset-2 hover:underline"
                   >
                     Plan a trip here
