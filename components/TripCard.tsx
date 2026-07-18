@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { cityCode, formatDateRange } from "@/lib/format";
+import { cityCode, formatDateRange, tripStatus, type TripStatus } from "@/lib/format";
 
 export interface TripCardTrip {
   id: string;
@@ -9,7 +9,20 @@ export interface TripCardTrip {
   end_date: string;
 }
 
+const STATUS_LABEL: Record<TripStatus, string> = {
+  ongoing: "Ongoing",
+  upcoming: "Upcoming",
+  past: "Past",
+};
+
+const STATUS_CLASS: Record<TripStatus, string> = {
+  ongoing: "border-coral-400/40 bg-coral-400/15 text-coral-400",
+  upcoming: "border-accent-400/40 bg-accent-400/15 text-accent-400",
+  past: "border-white/15 bg-white/5 text-white/50",
+};
+
 export function TripCard({ trip }: { trip: TripCardTrip }) {
+  const status = tripStatus(trip.start_date, trip.end_date);
   return (
     <Link
       href={`/trips/${trip.id}`}
@@ -23,7 +36,14 @@ export function TripCard({ trip }: { trip: TripCardTrip }) {
       </div>
       <div className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-x-4 gap-y-1 px-5 py-4">
         <div className="min-w-0">
-          <p className="truncate font-medium">{trip.name}</p>
+          <div className="flex items-center gap-2">
+            <p className="truncate font-medium">{trip.name}</p>
+            <span
+              className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase ${STATUS_CLASS[status]}`}
+            >
+              {STATUS_LABEL[status]}
+            </span>
+          </div>
           <p className="truncate text-sm text-white/60">{trip.destination_city}</p>
         </div>
         <div className="shrink-0 text-right">
