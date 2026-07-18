@@ -8,7 +8,7 @@ import { TripListSkeleton } from "@/components/TripCard";
  */
 export default function Loading() {
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6 pt-4">
+    <div className="mx-auto flex max-w-5xl flex-col gap-6 pt-4">
       <div className="flex items-center justify-between gap-3">
         <h1 className="font-display text-lg font-semibold">Trip history</h1>
       </div>
