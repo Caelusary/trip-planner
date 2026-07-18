@@ -1,5 +1,4 @@
 import { Suspense } from "react";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { fetchUpcomingTrips } from "@/lib/trips";
@@ -32,16 +31,11 @@ export default async function UpcomingTripsPage() {
 
   return (
     <TabPanelTransition>
-      <div className="mx-auto flex max-w-3xl flex-col gap-6 pt-4">
-        <div className="flex items-center justify-between gap-3">
-          <h1 className="font-display text-lg font-semibold">Upcoming trips</h1>
-          <Link
-            href="/trips"
-            className="text-accent-400 -m-2 shrink-0 rounded-md p-2 text-xs font-medium underline-offset-2 hover:underline"
-          >
-            Plan a trip
-          </Link>
-        </div>
+      <div className="mx-auto flex max-w-5xl flex-col gap-6 pt-4">
+        {/* No "back to trips" / "plan a trip" links here — both are now
+            tabs in the top nav (see components/TopNav.tsx) rather than
+            page-local links, so this page doesn't need its own copies. */}
+        <h1 className="font-display text-lg font-semibold">Upcoming trips</h1>
         <Suspense fallback={<TripListSkeleton />}>
           <UpcomingTripsList userId={user.id} />
         </Suspense>
