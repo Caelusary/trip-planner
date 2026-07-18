@@ -12,8 +12,8 @@ import { useEffect } from "react";
  * its generic error page with no way back except a full reload.
  *
  * Kept scoped to app/trips/ (rather than only a single root boundary) so
- * TripsLayout's sidebar (components/TripsSidebar.tsx) keeps rendering
- * alongside the error UI.
+ * TripsLayout's nav bar (components/TopNav.tsx) keeps rendering alongside
+ * the error UI.
  */
 export default function TripsError({
   error,
@@ -28,7 +28,7 @@ export default function TripsError({
   }, [error]);
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-4 pt-4">
+    <div className="mx-auto flex max-w-5xl flex-col gap-4 pt-4">
       <div className="glass-card flex flex-col items-start gap-3 p-6">
         <p
           role="alert"
