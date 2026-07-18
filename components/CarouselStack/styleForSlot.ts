@@ -1,37 +1,61 @@
-// Cover Flow, with progressive rotation — matches the reference image the
-// user pointed to: cards overlap in a receding, darkening stack (Cover
-// Flow's classic look) AND each successive card is tilted further than the
-// one before it, so the deck visibly *curves* toward the back instead of
-// every side card sharing one flat angle. An earlier version used one
-// constant tilt per side (true to Cover Flow, but read as a fixed fan, not
-// something "going around") — this keeps Cover Flow's stacking/overlap/
-// darkening but swaps in a per-depth angle so it reads as wrapping around
-// a curve.
-export const SLOTS_BEHIND = 4;
-export const SLOTS_AHEAD = 4;
-// Outermost ring position's tilt. Kept under 90deg deliberately: past 90,
-// `rotateY` shows a card's mirrored backside (no separate back face is
-// defined here), flipping its text into unreadable mirror noise. 78deg
-// stays just shy of that while still reading as "nearly edge-on, curving
-// out of view" at the deepest slot.
-const MAX_TILT_DEG = 78;
-const TILT_STEP_DEG = MAX_TILT_DEG / SLOTS_AHEAD;
-// Horizontal step between consecutively stacked cards on the same side, in
-// cqw (percent of the stage's own current width, via the
-// `container-type: inline-size` set on the stage element) — smaller than a
-// card's own rendered width so each one visibly overlaps its neighbor
-// (stacked deck, not separated tiles), but wide enough that a real portion
-// of each card shows past the one in front of it. Verified live that the
-// original 11/15 values here read as "cramped" — the first peek card sat
-// almost entirely hidden behind the primary card's own half-width — these
-// are roughly 60% wider.
-const STEP_CQW = 17;
-// First side card's offset from center.
-const BASE_OFFSET_CQW = 23;
-// A constant tilt applied to every card (not per-depth like TILT_STEP_DEG
+// Cover Flow: a large front card with two smaller peek cards fanned out on
+// each side, touching/slightly overlapping it rather than leaving a gap,
+// clipped at the stage's own edge (see CarouselStack.tsx's
+// `overflow-hidden` + `mask-image`) rather than spilling past it.
+//
+// An earlier version here used 2 slots each side with a wider front card
+// (60cqw) and wider peeks (36cqw) — verified live this read as too large/
+// wide overall. This version drops both card sizes (front 40cqw, peek
+// 24cqw — see the matching widths in CarouselStack.tsx) and adds a 3rd peek
+// level each side (7 cards visible at once instead of 5), closer to the
+// reference image's denser fan.
+//
+// Before that, an even earlier attempt tried 4 slots each side with a "true
+// circle" (sin/cos) formula sized so the fan reached ~90% of the stage
+// width or beyond — verified live that this pushed cards 74%+ past the
+// stage's own box, which (with no clipping) spilled into the page's
+// sidebar and off the browser window, and (once clipping was added) left
+// almost nothing visible since the front card alone nearly filled the box.
+export const SLOTS_BEHIND = 3;
+export const SLOTS_AHEAD = 3;
+
+// The offsets below AND the card widths in CarouselStack.tsx are all
+// cqw-relative, not capped in rem — verified live that mixing the two (cqw
+// offsets against rem-capped widths) is what caused a visible gap once the
+// stage widened (page redesign, sidebar -> top nav): the offset kept
+// scaling with the wider stage while the rem-capped cards didn't grow to
+// match, so they drifted apart.
+//
+// Center-to-center offset of each peek level from the front card, in cqw
+// (percent of the stage's own width, via `container-type: inline-size` on
+// the stage) — indexed by magnitude (offset for slot ±1 is OFFSETS_CQW[0],
+// ±2 is OFFSETS_CQW[1], etc). NOT an arithmetic progression (a constant
+// step per level, like the 2-level version this replaced used) — solved
+// instead from the actual box math, level by level, front-to-back:
+//   front's box is [30, 70] (its own half-width, 20cqw, either side of
+//   center). Each peek level's *box* is placed so its *visible* sliver
+//   (past whatever's already drawn on top of it, front or a nearer peek)
+//   comes out to roughly 67% / 42% / 17% of that peek's own 24cqw width —
+//   a deliberately decreasing sequence, so the deck reads as fading out
+//   toward the back rather than each level showing an equal amount. The
+//   3rd level's remaining 17% also happens to land inside the stage's own
+//   10%-edge `mask-image` fade (see CarouselStack.tsx), so in practice it
+//   reads as a soft glow at the boundary rather than a hard-edged sliver.
+//   A constant per-level step (as the 2-level version used) doesn't
+//   produce this: with 3 levels the same box-math shows the 3rd level's
+//   box entirely covered by the 2nd's — 0% visible, not a fading sliver —
+//   because a fixed step doesn't account for how much of the *stage's*
+//   remaining width each successive level actually has left to work with.
+const OFFSETS_CQW = [24, 34, 38];
+// How far back each depth level sits, in px — small enough that (combined
+// with the stage's own `perspective`) peek cards stay close to full size
+// rather than shrinking toward a vanishing point.
+const RECEDE_PX_PER_LEVEL = 60;
+// A constant tilt applied to every card (not part of the per-level rotation
 // above) so the whole deck reads as viewed from slightly above rather than
-// dead-on — the "overhead carousel" look. Small enough that card text stays
-// fully legible; this is a viewing-angle cue, not a real perspective shift.
+// dead-on — the "overhead carousel" look. Small enough that card content
+// stays fully legible; this is a viewing-angle cue, not a real perspective
+// shift.
 const OVERHEAD_TILT_DEG = 7;
 
 export interface SlotStyle {
@@ -47,10 +71,9 @@ export function styleForSlot(slot: number, dragPx: number): SlotStyle {
   const side = slot < 0 ? -1 : 1;
 
   // Nearer-to-center cards must draw over farther ones on the same side
-  // (they visually overlap by design, see STEP_CQW above) — magnitude-based
-  // zIndex, unaffected by the 3D transform itself since these are
-  // independently-positioned absolute elements, not one shared
-  // `preserve-3d` group.
+  // (they visually overlap by design) — magnitude-based zIndex, unaffected
+  // by the 3D transform itself since these are independently-positioned
+  // absolute elements, not one shared `preserve-3d` group.
   const zIndex = 40 - magnitude;
 
   if (magnitude === 0) {
@@ -62,22 +85,19 @@ export function styleForSlot(slot: number, dragPx: number): SlotStyle {
     };
   }
 
-  const offsetCqw = BASE_OFFSET_CQW + (magnitude - 1) * STEP_CQW;
-  const tiltDeg = magnitude * TILT_STEP_DEG;
-  const recedePx = magnitude * 46;
-  const scale = Math.max(0.56, 1 - magnitude * 0.095);
+  const offsetCqw = side * OFFSETS_CQW[magnitude - 1];
+  const recedePx = magnitude * RECEDE_PX_PER_LEVEL;
   // Darkens toward the back, floored well above black so the outermost
-  // ring position still visibly reads as "a card", not a void — matches
-  // the reference image's near-but-not-fully-black outer edge.
-  const brightness = Math.max(0.4, 1 - magnitude * 0.15);
+  // ring position still visibly reads as "a card", not a void.
+  const brightness = Math.max(0.55, 1 - magnitude * 0.18);
 
   return {
-    // translate/translateZ position the card first (independent of
-    // rotation); rotateY comes last so it tilts each card in place around
-    // its own center rather than further displacing it — that's what lets
-    // STEP_CQW's overlap and the progressive tilt both hold at once
-    // instead of fighting each other.
-    transform: `translate(calc(-50% + ${side * offsetCqw}cqw), 0) translateZ(${-recedePx}px) rotateX(${OVERHEAD_TILT_DEG}deg) rotateY(${side * tiltDeg}deg) scale(${scale})`,
+    // No rotateY here — peek cards stay flat/upright, just offset sideways
+    // and pushed back slightly (translateZ + the darkening below cue their
+    // depth instead of a rotated "wheel" turn). Only the constant
+    // overhead-viewing-angle tilt (rotateX, every card including the
+    // front one) remains.
+    transform: `translate(calc(-50% + ${offsetCqw}cqw), 0) translateZ(${-recedePx}px) rotateX(${OVERHEAD_TILT_DEG}deg)`,
     transformOrigin: "center",
     opacity: 1,
     zIndex,
