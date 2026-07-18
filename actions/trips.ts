@@ -64,6 +64,8 @@ export async function createTrip(formData: FormData) {
   if (error) throwSafeDbError(error, "save this trip");
 
   revalidatePath("/trips");
+  revalidatePath("/trips/upcoming");
+  redirect("/trips/upcoming");
 }
 
 export async function deleteTrip(tripId: string) {
