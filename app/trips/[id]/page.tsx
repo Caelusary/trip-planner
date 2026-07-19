@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { preconnect } from "react-dom";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/supabase/user";
 import { addStop, deleteStop, deleteTrip } from "@/actions/trips";
 import { forecastForDateRange, getForecast } from "@/lib/weather";
 import { cityCode, formatDateRange } from "@/lib/format";
@@ -18,11 +19,9 @@ export default async function TripDetailPage({
   // Warm the connection for the OpenWeatherMap icon <img>s rendered below —
   // emitted as <link rel="preconnect"> in <head>, saving DNS+TCP+TLS on first icon fetch.
   preconnect("https://openweathermap.org");
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) redirect("/login");
+  const supabase = await createClient();
 
   // Trip and stops queries are independent — run them in parallel. The trip
   // lookup is scoped to the signed-in user (defense in depth on top of RLS,
