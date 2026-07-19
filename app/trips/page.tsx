@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { preconnect } from "react-dom";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/supabase/user";
 import { TopAttractions } from "@/components/TopAttractions";
 
 export default async function TripsPage() {
@@ -11,10 +11,7 @@ export default async function TripsPage() {
   // openweathermap.org preconnect does for weather icons.
   preconnect("https://picsum.photos");
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) redirect("/login");
 
   return (
