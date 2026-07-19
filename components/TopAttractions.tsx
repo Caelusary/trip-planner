@@ -41,6 +41,13 @@ export function TopAttractions() {
   }
 
   const [category, setCategory] = useState<AttractionCategory | "All">("All");
+  const [query, setQuery] = useState("");
+  // A search typed for one country is almost never meant for the next one
+  // picked — clear it on country change instead of silently filtering
+  // against a name that no longer applies.
+  useEffect(() => {
+    setQuery("");
+  }, [country]);
   const allAttractionsUnfiltered = attractionsFor(country);
   // Memoized: `.filter()` below builds a new array every call, so without
   // this, `allAttractions` got a fresh reference on every render whenever a
@@ -108,21 +115,31 @@ export function TopAttractions() {
   }, [selectedIds]);
 
   const items: CarouselItem[] = useMemo(() => {
-    const filtered = allAttractions.filter(
+    let filtered = allAttractions.filter(
       (a) => a.budgetMax >= valueUSD.min && a.budgetMin <= valueUSD.max,
     );
+    const q = query.trim().toLowerCase();
+    if (q) {
+      filtered = filtered.filter(
+        (a) => a.name.toLowerCase().includes(q) || a.city.toLowerCase().includes(q),
+      );
+    }
     // Highest-rated first — the deck's own order (not just the "Top N"
     // caption in CarouselStack.tsx) now reflects rating, so swiping/
     // clicking through actually visits destinations best-to-worst.
     filtered.sort((a, b) => b.rating - a.rating);
-    return filtered.map((a) => {
+    // With no search typed, the deck defaults to the top 10 by rating —
+    // typing a name/city search surfaces every match instead, even ones
+    // outside that top 10.
+    const capped = q ? filtered : filtered.slice(0, 10);
+    return capped.map((a) => {
       const label = `${a.city}, ${a.country}`;
       return {
         ...a,
         href: `/trips/plan?destination=${encodeURIComponent(label)}`,
       };
     });
-  }, [allAttractions, valueUSD]);
+  }, [allAttractions, valueUSD, query]);
 
   function toggleSelect(id: string) {
     setSelectedIds((current) => {
@@ -217,6 +234,40 @@ export function TopAttractions() {
         </p>
       )}
 
+      <div className="glass-input flex w-full max-w-xs items-center gap-2 px-3 py-2 text-sm">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.75"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+          className="h-4 w-4 shrink-0 text-white/50"
+        >
+          <circle cx="11" cy="11" r="7" />
+          <path d="m20 20-3.5-3.5" />
+        </svg>
+        <input
+          type="text"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder={`Search attractions in ${COUNTRY_NAMES[country]}`}
+          aria-label={`Search attractions in ${COUNTRY_NAMES[country]}`}
+          className="w-full min-w-0 bg-transparent outline-none placeholder:text-white/40"
+        />
+        {query && (
+          <button
+            type="button"
+            onClick={() => setQuery("")}
+            aria-label="Clear search"
+            className="shrink-0 text-white/40 hover:text-white"
+          >
+            ×
+          </button>
+        )}
+      </div>
+
       <CategoryFilter value={category} onChange={setCategory} />
 
       <BudgetFilter
@@ -236,7 +287,9 @@ export function TopAttractions() {
         />
       ) : (
         <p className="glass-card w-full max-w-xs p-6 text-center text-sm text-white/70">
-          No attractions match — try a different category or a wider budget.
+          {query
+            ? `No attractions match "${query}" — try a different search, category, or budget.`
+            : "No attractions match — try a different category or a wider budget."}
         </p>
       )}
     </section>
