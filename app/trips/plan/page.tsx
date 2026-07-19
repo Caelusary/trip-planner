@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/supabase/user";
 import { createTrip } from "@/actions/trips";
 import { SubmitButton } from "@/components/SubmitButton";
 import { CityAutocomplete } from "@/components/CityAutocomplete";
@@ -11,10 +11,7 @@ export default async function PlanTripPage({
 }) {
   const { destination } = await searchParams;
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) redirect("/login");
 
   return (
