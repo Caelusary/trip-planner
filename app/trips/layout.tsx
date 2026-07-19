@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/supabase/user";
 import { TopNav } from "@/components/TopNav";
 
 export default async function TripsLayout({ children }: { children: React.ReactNode }) {
@@ -6,10 +6,10 @@ export default async function TripsLayout({ children }: { children: React.ReactN
   // out (see e.g. app/trips/page.tsx) — this fetch is only to surface the
   // signed-in user's email in the nav bar's account avatar, so it
   // deliberately doesn't redirect itself and tolerates a null user.
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // `getCurrentUser` is memoized per request (React `cache()`) — the page
+  // rendered inside this layout calls it too, and previously each of those
+  // independently hit Supabase's auth server; now they share one call.
+  const user = await getCurrentUser();
 
   return (
     <div className="flex flex-1 flex-col">
