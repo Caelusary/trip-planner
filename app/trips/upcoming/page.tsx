@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/supabase/user";
 import { fetchUpcomingTrips } from "@/lib/trips";
 import { TripCard, TripListSkeleton } from "@/components/TripCard";
 import { TabPanelTransition } from "@/components/TabPanelTransition";
@@ -23,10 +24,7 @@ async function UpcomingTripsList({ userId }: { userId: string }) {
 }
 
 export default async function UpcomingTripsPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) redirect("/login");
 
   return (
