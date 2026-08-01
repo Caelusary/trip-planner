@@ -10,6 +10,8 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { DeleteTripButton } from "@/components/DeleteTripButton";
 import { AddStopForm } from "@/components/AddStopForm";
 import { WeatherHorizon } from "@/components/WeatherHorizon";
+import { TripMapLoader } from "@/components/TripMapLoader";
+import type { MapPoint } from "@/components/TripMap";
 import { STOP_TYPE_LABEL } from "@/lib/stopTypes";
 
 export default async function TripDetailPage({
@@ -55,6 +57,15 @@ export default async function TripDetailPage({
   const deleteTripWithId = deleteTrip.bind(null, id);
   const addStopToTrip = addStop.bind(null, id);
 
+  const mapPoints: MapPoint[] = [
+    ...(trip.destination_lat != null && trip.destination_lon != null
+      ? [{ id: `trip-${trip.id}`, label: trip.destination_city, lat: trip.destination_lat, lon: trip.destination_lon }]
+      : []),
+    ...stops
+      .filter((stop): stop is typeof stop & { lat: number; lon: number } => stop.lat != null && stop.lon != null)
+      .map((stop) => ({ id: stop.id, label: stop.city, lat: stop.lat, lon: stop.lon })),
+  ];
+
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-8 pt-4">
       <section className="glass-card enter flex items-stretch overflow-hidden">
@@ -89,6 +100,11 @@ export default async function TripDetailPage({
         ) : (
           <p className="text-sm text-white/70">{forecastNote}</p>
         )}
+      </section>
+
+      <section className="glass-card enter p-6">
+        <h2 className="font-display mb-4 text-lg font-semibold">Map</h2>
+        <TripMapLoader points={mapPoints} />
       </section>
 
       <section className="glass-card enter p-6">
