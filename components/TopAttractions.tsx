@@ -43,11 +43,14 @@ export function TopAttractions() {
   const [category, setCategory] = useState<AttractionCategory | "All">("All");
   const [query, setQuery] = useState("");
   // A search typed for one country is almost never meant for the next one
-  // picked — clear it on country change instead of silently filtering
-  // against a name that no longer applies.
-  useEffect(() => {
+  // picked — clear it on render during country change (same render-phase
+  // pattern as datasetRangeUSD/valueUSD below) rather than in an effect, so
+  // there's no one-frame flash of a stale query against the new country.
+  const [syncedCountry, setSyncedCountry] = useState(country);
+  if (syncedCountry !== country) {
+    setSyncedCountry(country);
     setQuery("");
-  }, [country]);
+  }
   const allAttractionsUnfiltered = attractionsFor(country);
   // Memoized: `.filter()` below builds a new array every call, so without
   // this, `allAttractions` got a fresh reference on every render whenever a
