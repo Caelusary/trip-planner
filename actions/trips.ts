@@ -39,6 +39,22 @@ export async function createTrip(formData: FormData) {
   redirect("/trips/upcoming");
 }
 
+export async function setTripSharing(tripId: string, enabled: boolean) {
+  const supabase = await createClient();
+  const user = await requireUser(supabase);
+  requireUuid(tripId, "trip id");
+  await requireTripOwnership(supabase, tripId, user.id);
+
+  const { error } = await supabase
+    .from("trips")
+    .update({ share_enabled: enabled })
+    .eq("id", tripId)
+    .eq("user_id", user.id);
+  if (error) throwSafeDbError(error, "update sharing for this trip");
+
+  revalidatePath(`/trips/${tripId}`);
+}
+
 export async function deleteTrip(tripId: string) {
   const supabase = await createClient();
   const user = await requireUser(supabase);

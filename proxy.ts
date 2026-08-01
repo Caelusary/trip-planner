@@ -42,8 +42,12 @@ export async function proxy(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
   const isAuthPage = pathname.startsWith("/login") || pathname.startsWith("/signup");
+  // Shared trip links are the one deliberately public, no-login page —
+  // gated by knowing the trip's own unguessable token (see the
+  // get_shared_trip/get_shared_trip_stops functions), not by session.
+  const isPublicSharedTrip = pathname.startsWith("/shared/");
 
-  if (!user && !isAuthPage && pathname !== "/") {
+  if (!user && !isAuthPage && !isPublicSharedTrip && pathname !== "/") {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);

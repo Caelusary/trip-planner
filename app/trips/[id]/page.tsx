@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { preconnect } from "react-dom";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/supabase/user";
-import { addStop, deleteStop, deleteTrip } from "@/actions/trips";
+import { addStop, deleteStop, deleteTrip, setTripSharing } from "@/actions/trips";
 import { forecastForDateRange, getForecast } from "@/lib/weather";
 import { fetchTripDetail } from "@/lib/trips";
 import { cityCode, formatDateRange, tripCountdownLabel } from "@/lib/format";
@@ -14,6 +14,7 @@ import { AddStopForm } from "@/components/AddStopForm";
 import { WeatherHorizon } from "@/components/WeatherHorizon";
 import { TripMapLoader } from "@/components/TripMapLoader";
 import type { MapPoint } from "@/components/TripMap";
+import { ShareTripToggle } from "@/components/ShareTripToggle";
 import { STOP_TYPE_LABEL } from "@/lib/stopTypes";
 
 export default async function TripDetailPage({
@@ -96,6 +97,12 @@ export default async function TripDetailPage({
             >
               Trip pass
             </Link>
+            <ShareTripToggle
+              tripId={id}
+              shareToken={trip.share_token}
+              initialEnabled={trip.share_enabled}
+              setSharing={setTripSharing}
+            />
             <AddToCalendarButton
               tripId={id}
               tripName={trip.name}
