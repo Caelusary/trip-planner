@@ -13,7 +13,12 @@ export default async function TripsLayout({ children }: { children: React.ReactN
 
   return (
     <div className="flex flex-1 flex-col">
-      <TopNav email={user?.email ?? null} />
+      {/* Hidden on print — the Trip Pass route (app/trips/[id]/pass) is the
+          one page in here meant to be printed, and the nav has no place on
+          a printed ticket. */}
+      <div className="print:hidden">
+        <TopNav email={user?.email ?? null} />
+      </div>
       {/* TopNav is `sticky`, not `fixed` — it still occupies its own space
           in normal flow, so content just flows below it with no
           compensating padding needed (the old fixed BottomNav needed a

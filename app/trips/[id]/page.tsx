@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { preconnect } from "react-dom";
 import { createClient } from "@/lib/supabase/server";
@@ -8,6 +9,7 @@ import { fetchTripDetail } from "@/lib/trips";
 import { cityCode, formatDateRange, tripCountdownLabel } from "@/lib/format";
 import { SubmitButton } from "@/components/SubmitButton";
 import { DeleteTripButton } from "@/components/DeleteTripButton";
+import { AddToCalendarButton } from "@/components/AddToCalendarButton";
 import { AddStopForm } from "@/components/AddStopForm";
 import { WeatherHorizon } from "@/components/WeatherHorizon";
 import { TripMapLoader } from "@/components/TripMapLoader";
@@ -87,7 +89,23 @@ export default async function TripDetailPage({
               <p className="text-accent-400 mt-0.5 text-xs font-medium">{countdown}</p>
             )}
           </div>
-          <DeleteTripButton tripName={trip.name} action={deleteTripWithId} />
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href={`/trips/${id}/pass`}
+              className="inline-flex min-h-11 items-center justify-center rounded-md border border-white/30 px-3 py-1.5 text-sm text-white/90 transition hover:bg-white/10"
+            >
+              Trip pass
+            </Link>
+            <AddToCalendarButton
+              tripId={id}
+              tripName={trip.name}
+              destinationCity={trip.destination_city}
+              startDate={trip.start_date}
+              endDate={trip.end_date}
+              stops={stops}
+            />
+            <DeleteTripButton tripName={trip.name} action={deleteTripWithId} />
+          </div>
         </div>
       </section>
 

@@ -235,6 +235,32 @@ button:focus-visible {
   border-right: 1px dashed color-mix(in oklch, white 22%, var(--color-ink-900));
 }
 
+/* ---------- Trip Pass print output ---------- */
+/* The app's whole palette is dark-mode-first (light text on a translucent
+   dark card), which is illegible and wastes ink on paper — the Trip Pass
+   route is the one place someone actually prints, so force it back to
+   plain black-on-white for @media print specifically. */
+@media print {
+  body {
+    background: white !important;
+  }
+  .glass-card {
+    background: white !important;
+    border-color: #000 !important;
+    box-shadow: none !important;
+  }
+  .glass-card,
+  .glass-card * {
+    color: #000 !important;
+  }
+  .ticket-stub {
+    border-right-color: #000 !important;
+  }
+  .border-dashed {
+    border-color: #000 !important;
+  }
+}
+
 /* ---------- One-shot staggered entry for lists (trips, stops, forecast) ---------- */
 @keyframes rise-in {
   from {
