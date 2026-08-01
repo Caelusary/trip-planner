@@ -4,6 +4,12 @@ import { preconnect } from "react-dom";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/supabase/user";
 import { addStop, deleteStop, deleteTrip, setTripSharing } from "@/actions/trips";
+import {
+  addPackingItem,
+  deletePackingItem,
+  generatePackingSuggestions,
+  togglePackingItem,
+} from "@/actions/packing";
 import { forecastForDateRange, getForecast } from "@/lib/weather";
 import { fetchTripDetail } from "@/lib/trips";
 import { cityCode, formatDateRange, tripCountdownLabel } from "@/lib/format";
@@ -15,6 +21,7 @@ import { WeatherHorizon } from "@/components/WeatherHorizon";
 import { TripMapLoader } from "@/components/TripMapLoader";
 import type { MapPoint } from "@/components/TripMap";
 import { ShareTripToggle } from "@/components/ShareTripToggle";
+import { PackingList } from "@/components/PackingList";
 import { STOP_TYPE_LABEL } from "@/lib/stopTypes";
 
 export default async function TripDetailPage({
@@ -33,7 +40,7 @@ export default async function TripDetailPage({
   // Scoped to the signed-in user (defense in depth on top of RLS, mirroring
   // requireTripOwnership in actions/trips.ts) so a guessed/known trip id
   // belonging to another user can't be viewed here.
-  const { trip, stops } = await fetchTripDetail(supabase, id, user.id);
+  const { trip, stops, packingItems } = await fetchTripDetail(supabase, id, user.id);
   if (!trip) notFound();
 
   const countdown = tripCountdownLabel(trip.start_date, trip.end_date);
@@ -59,6 +66,10 @@ export default async function TripDetailPage({
 
   const deleteTripWithId = deleteTrip.bind(null, id);
   const addStopToTrip = addStop.bind(null, id);
+  const addPackingItemToTrip = addPackingItem.bind(null, id);
+  const togglePackingItemForTrip = togglePackingItem.bind(null, id);
+  const deletePackingItemForTrip = deletePackingItem.bind(null, id);
+  const generatePackingSuggestionsForTrip = generatePackingSuggestions.bind(null, id);
 
   const mapPoints: MapPoint[] = [
     ...(trip.destination_lat != null && trip.destination_lon != null
@@ -184,6 +195,17 @@ export default async function TripDetailPage({
             No stops yet — add your first stop above to build the itinerary.
           </p>
         )}
+      </section>
+
+      <section className="glass-card enter p-6">
+        <h2 className="font-display mb-4 text-lg font-semibold">Packing list</h2>
+        <PackingList
+          items={packingItems}
+          addAction={addPackingItemToTrip}
+          toggleAction={togglePackingItemForTrip}
+          deleteAction={deletePackingItemForTrip}
+          generateAction={generatePackingSuggestionsForTrip}
+        />
       </section>
     </div>
   );
