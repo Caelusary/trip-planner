@@ -4,7 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/supabase/user";
 import { addStop, deleteStop, deleteTrip } from "@/actions/trips";
 import { forecastForDateRange, getForecast } from "@/lib/weather";
-import { cityCode, formatDateRange } from "@/lib/format";
+import { fetchTripDetail } from "@/lib/trips";
+import { cityCode, formatDateRange, tripCountdownLabel } from "@/lib/format";
 import { SubmitButton } from "@/components/SubmitButton";
 import { DeleteTripButton } from "@/components/DeleteTripButton";
 import { WeatherHorizon } from "@/components/WeatherHorizon";
@@ -23,19 +24,13 @@ export default async function TripDetailPage({
   if (!user) redirect("/login");
   const supabase = await createClient();
 
-  // Trip and stops queries are independent — run them in parallel. The trip
-  // lookup is scoped to the signed-in user (defense in depth on top of RLS,
-  // mirroring requireTripOwnership in actions/trips.ts) so a guessed/known
-  // trip id belonging to another user can't be viewed here.
-  const [{ data: trip }, { data: stops }] = await Promise.all([
-    supabase.from("trips").select("*").eq("id", id).eq("user_id", user.id).maybeSingle(),
-    supabase
-      .from("trip_stops")
-      .select("*")
-      .eq("trip_id", id)
-      .order("position", { ascending: true }),
-  ]);
+  // Scoped to the signed-in user (defense in depth on top of RLS, mirroring
+  // requireTripOwnership in actions/trips.ts) so a guessed/known trip id
+  // belonging to another user can't be viewed here.
+  const { trip, stops } = await fetchTripDetail(supabase, id, user.id);
   if (!trip) notFound();
+
+  const countdown = tripCountdownLabel(trip.start_date, trip.end_date);
 
   let forecast: Awaited<ReturnType<typeof getForecast>> = [];
   let forecastNote: string | null = null;
@@ -76,6 +71,9 @@ export default async function TripDetailPage({
             <p className="text-sm text-white/70">
               {trip.destination_city} · {formatDateRange(trip.start_date, trip.end_date)}
             </p>
+            {countdown && (
+              <p className="text-accent-400 mt-0.5 text-xs font-medium">{countdown}</p>
+            )}
           </div>
           <DeleteTripButton tripName={trip.name} action={deleteTripWithId} />
         </div>

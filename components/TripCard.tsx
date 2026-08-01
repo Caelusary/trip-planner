@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { cityCode, formatDateRange, tripStatus, type TripStatus } from "@/lib/format";
+import { cityCode, formatDateRange, tripCountdownLabel, tripStatus, type TripStatus } from "@/lib/format";
 
 export interface TripCardTrip {
   id: string;
@@ -23,6 +23,7 @@ const STATUS_CLASS: Record<TripStatus, string> = {
 
 export function TripCard({ trip }: { trip: TripCardTrip }) {
   const status = tripStatus(trip.start_date, trip.end_date);
+  const countdown = tripCountdownLabel(trip.start_date, trip.end_date);
   return (
     <Link
       href={`/trips/${trip.id}`}
@@ -49,6 +50,7 @@ export function TripCard({ trip }: { trip: TripCardTrip }) {
         <div className="shrink-0 text-right">
           <p className="text-[10px] tracking-widest text-white/60 uppercase">Travel dates</p>
           <p className="text-sm text-white/80">{formatDateRange(trip.start_date, trip.end_date)}</p>
+          {countdown && <p className="text-accent-400 mt-0.5 text-xs font-medium">{countdown}</p>}
         </div>
       </div>
     </Link>

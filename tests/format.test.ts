@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { cityCode, formatDateRange, formatDayShort } from "@/lib/format";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { cityCode, formatDateRange, formatDayShort, tripCountdownLabel } from "@/lib/format";
 
 describe("formatDayShort", () => {
   it("formats an ISO date as weekday, month, day", () => {
@@ -64,5 +64,44 @@ describe("cityCode", () => {
   it("falls back to an em dash for input with no letters", () => {
     expect(cityCode("123")).toBe("—");
     expect(cityCode("")).toBe("—");
+  });
+});
+
+describe("tripCountdownLabel", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-09T12:00:00Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("counts down to a future trip", () => {
+    expect(tripCountdownLabel("2026-07-23", "2026-07-30")).toBe("14 days to go");
+  });
+
+  it("uses singular phrasing for exactly one day out", () => {
+    expect(tripCountdownLabel("2026-07-10", "2026-07-15")).toBe("1 day to go");
+  });
+
+  it("treats a same-day start as ongoing, not upcoming", () => {
+    expect(tripCountdownLabel("2026-07-09", "2026-07-15")).toBe("6 days left");
+  });
+
+  it("counts down the days left on an ongoing trip", () => {
+    expect(tripCountdownLabel("2026-07-05", "2026-07-12")).toBe("3 days left");
+  });
+
+  it("uses singular phrasing for the second-to-last day", () => {
+    expect(tripCountdownLabel("2026-07-05", "2026-07-10")).toBe("1 day left");
+  });
+
+  it("says it's the last day when the trip ends today", () => {
+    expect(tripCountdownLabel("2026-07-05", "2026-07-09")).toBe("Last day");
+  });
+
+  it("returns null for a trip that already ended", () => {
+    expect(tripCountdownLabel("2026-06-01", "2026-06-05")).toBeNull();
   });
 });

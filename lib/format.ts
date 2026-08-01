@@ -79,6 +79,38 @@ export function tripStatus(startIso: string, endIso: string): TripStatus {
   return "upcoming";
 }
 
+/** Whole days between two YYYY-MM-DD dates (UTC, date-only — see parseISODate). */
+function daysBetween(fromIso: string, toIso: string): number {
+  const from = parseISODate(fromIso);
+  const to = parseISODate(toIso);
+  if (!from || !to) return 0;
+  return Math.round((to.getTime() - from.getTime()) / 86_400_000);
+}
+
+/**
+ * "N days to go" / "N days left" style countdown, the small nudge that a
+ * plain date range doesn't give you — seeing the number shrink each day is
+ * what makes a trip feel imminent rather than just a row in a list. `null`
+ * for past trips, where a countdown no longer means anything.
+ */
+export function tripCountdownLabel(startIso: string, endIso: string): string | null {
+  const today = new Date().toISOString().slice(0, 10);
+  const status = tripStatus(startIso, endIso);
+
+  if (status === "past") return null;
+
+  if (status === "ongoing") {
+    const daysLeft = daysBetween(today, endIso);
+    if (daysLeft <= 0) return "Last day";
+    return daysLeft === 1 ? "1 day left" : `${daysLeft} days left`;
+  }
+
+  // "upcoming" always has a start strictly after today (tripStatus already
+  // classifies a same-day start as "ongoing"), so daysUntil is never 0 here.
+  const daysUntil = daysBetween(today, startIso);
+  return daysUntil === 1 ? "1 day to go" : `${daysUntil} days to go`;
+}
+
 /**
  * Decorative 3-letter "airport style" code for the boarding-pass card motif —
  * not a real IATA lookup, just the city name's first letters.
