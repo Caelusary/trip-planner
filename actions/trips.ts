@@ -6,6 +6,9 @@ import { createClient } from "@/lib/supabase/server";
 import { geocodeCity } from "@/lib/weather";
 import { MAX_NOTES_LENGTH, optionalDate, requireDate, requireText, requireUuid } from "@/lib/validation";
 import { requireTripOwnership, requireUser, throwSafeDbError } from "@/lib/tripAuth";
+import { isStopType, type StopType } from "@/lib/stopTypes";
+
+const MAX_CONFIRMATION_NUMBER_LENGTH = 100;
 
 export async function createTrip(formData: FormData) {
   const supabase = await createClient();
@@ -59,6 +62,8 @@ interface StopInput {
   arrivalDate: string | null;
   departureDate: string | null;
   notes: string | null;
+  stopType: StopType;
+  confirmationNumber: string | null;
 }
 
 /**
@@ -86,6 +91,8 @@ async function insertStop(
     p_arrival_date: input.arrivalDate,
     p_departure_date: input.departureDate,
     p_notes: input.notes,
+    p_stop_type: input.stopType,
+    p_confirmation_number: input.confirmationNumber,
   });
 }
 
@@ -93,6 +100,18 @@ function readOptionalNotes(formData: FormData): string | null {
   const rawNotes = formData.get("notes");
   return typeof rawNotes === "string" && rawNotes.trim()
     ? rawNotes.trim().slice(0, MAX_NOTES_LENGTH)
+    : null;
+}
+
+function readStopType(formData: FormData): StopType {
+  const raw = formData.get("stop_type");
+  return typeof raw === "string" && isStopType(raw) ? raw : "activity";
+}
+
+function readOptionalConfirmationNumber(formData: FormData): string | null {
+  const raw = formData.get("confirmation_number");
+  return typeof raw === "string" && raw.trim()
+    ? raw.trim().slice(0, MAX_CONFIRMATION_NUMBER_LENGTH)
     : null;
 }
 
@@ -109,8 +128,17 @@ export async function addStop(tripId: string, formData: FormData) {
     throw new Error("Departure date must be on or after arrival date.");
   }
   const notes = readOptionalNotes(formData);
+  const stopType = readStopType(formData);
+  const confirmationNumber = readOptionalConfirmationNumber(formData);
 
-  const { error } = await insertStop(supabase, tripId, { city, arrivalDate, departureDate, notes });
+  const { error } = await insertStop(supabase, tripId, {
+    city,
+    arrivalDate,
+    departureDate,
+    notes,
+    stopType,
+    confirmationNumber,
+  });
   if (error) throwSafeDbError(error, "add this stop");
 
   revalidatePath(`/trips/${tripId}`);
@@ -138,6 +166,8 @@ export async function addAttractionToTrip(formData: FormData) {
     arrivalDate: null,
     departureDate: null,
     notes,
+    stopType: "activity",
+    confirmationNumber: null,
   });
   if (error) throwSafeDbError(error, "add this stop");
 

@@ -8,8 +8,9 @@ import { fetchTripDetail } from "@/lib/trips";
 import { cityCode, formatDateRange, tripCountdownLabel } from "@/lib/format";
 import { SubmitButton } from "@/components/SubmitButton";
 import { DeleteTripButton } from "@/components/DeleteTripButton";
+import { AddStopForm } from "@/components/AddStopForm";
 import { WeatherHorizon } from "@/components/WeatherHorizon";
-import { CityAutocomplete } from "@/components/CityAutocomplete";
+import { STOP_TYPE_LABEL } from "@/lib/stopTypes";
 
 export default async function TripDetailPage({
   params,
@@ -92,36 +93,7 @@ export default async function TripDetailPage({
 
       <section className="glass-card enter p-6">
         <h2 className="font-display mb-4 text-lg font-semibold">Stops</h2>
-        <form action={addStopToTrip} className="mb-6 grid gap-3 sm:grid-cols-2">
-          <label className="flex flex-col gap-1 text-xs text-white/70 sm:col-span-2">
-            City
-            <CityAutocomplete
-              name="city"
-              placeholder="e.g. Kyoto"
-              required
-              className="glass-input w-full px-3 py-2"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-xs text-white/70">
-            Arrival
-            <input name="arrival_date" type="date" className="glass-input px-3 py-2" />
-          </label>
-          <label className="flex flex-col gap-1 text-xs text-white/70">
-            Departure
-            <input name="departure_date" type="date" className="glass-input px-3 py-2" />
-          </label>
-          <label className="flex flex-col gap-1 text-xs text-white/70 sm:col-span-2">
-            Notes (optional)
-            <input
-              name="notes"
-              placeholder="Booking numbers, must-sees…"
-              className="glass-input px-3 py-2"
-            />
-          </label>
-          <SubmitButton pendingLabel="Adding stop…" className="sm:col-span-2">
-            Add stop
-          </SubmitButton>
-        </form>
+        <AddStopForm action={addStopToTrip} />
 
         {stops?.length ? (
           <div className="stagger relative flex flex-col gap-4">
@@ -133,11 +105,21 @@ export default async function TripDetailPage({
                   <span className="bg-accent-400 ring-ink-900 relative z-10 mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ring-4" />
                   <div className="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-lg bg-white/5 p-4">
                     <div className="min-w-0">
-                      <p className="font-medium">{stop.city}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">{stop.city}</p>
+                        <span className="border-accent-400/40 bg-accent-400/15 text-accent-400 shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase">
+                          {STOP_TYPE_LABEL[stop.stop_type]}
+                        </span>
+                      </div>
                       <p className="text-sm text-white/70">
                         {formatDateRange(stop.arrival_date, stop.departure_date) ||
                           "No dates set"}
                       </p>
+                      {stop.confirmation_number && (
+                        <p className="mt-1 text-sm text-white/60">
+                          Confirmation #{stop.confirmation_number}
+                        </p>
+                      )}
                       {stop.notes && (
                         <p className="mt-1 text-sm text-white/60">{stop.notes}</p>
                       )}
