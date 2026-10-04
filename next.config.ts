@@ -18,11 +18,15 @@ const contentSecurityPolicy = [
   // that's exactly what's pinned in `images.remotePatterns` below).
   // openweathermap.org (not api.openweathermap.org, which is server-only
   // and never touches the browser) IS fetched directly by the browser: the
-  // per-day forecast icon in components/WeatherHorizon.tsx is a raw SVG
-  // <image href="https://openweathermap.org/img/wn/..."> rendered on the
+  // per-day forecast icon in components/WeatherForecast.tsx is a raw
+  // <img src="https://openweathermap.org/img/wn/..."> rendered on the
   // trip detail page, not a next/image element — omitting it would silently
   // blank out every forecast icon.
-  "img-src 'self' https://upload.wikimedia.org https://picsum.photos https://openweathermap.org",
+  // tile.openstreetmap.org serves the raster map tiles for components/
+  // TripMap.tsx (Leaflet rotates across the a/b/c subdomains, pinned here
+  // rather than a wildcard). The Leaflet marker images are bundled and
+  // served same-origin, so no CDN host is needed for them.
+  "img-src 'self' https://upload.wikimedia.org https://picsum.photos https://openweathermap.org https://a.tile.openstreetmap.org https://b.tile.openstreetmap.org https://c.tile.openstreetmap.org",
   // next/font (Geist, Fraunces) downloads and self-hosts font files at
   // build time under /_next/static/media — served same-origin, no data:
   // URIs or third-party font CDN involved (verified no @font-face/data:
