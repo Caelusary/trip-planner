@@ -3,16 +3,27 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
+import markerIcon from "leaflet/dist/images/marker-icon.png";
+import markerShadow from "leaflet/dist/images/marker-shadow.png";
 
 // Leaflet's default marker icon resolves relative image paths that break
-// once bundled — pointing them at the same package version's own images on
-// a CDN sidesteps bundler-specific asset-import configuration entirely
-// (map tiles below already come from a third-party host, so this doesn't
-// introduce a new category of external dependency).
+// once bundled — importing the package's own images lets Next emit them
+// under /_next/static/media, so they load same-origin and the CSP img-src
+// needs no third-party CDN for them. imagePath is pinned to "" because
+// Icon.Default otherwise prefixes these already-absolute URLs with a path
+// it sniffs from leaflet.css. Turbopack hands these imports to the client
+// as a bare URL string despite the StaticImageData typing, so assetUrl
+// accepts either shape — reading .src blindly yields "undefined" in prod.
+function assetUrl(asset: string | { src: string }): string {
+  return typeof asset === "string" ? asset : asset.src;
+}
+
+L.Icon.Default.imagePath = "";
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  iconRetinaUrl: assetUrl(markerIcon2x),
+  iconUrl: assetUrl(markerIcon),
+  shadowUrl: assetUrl(markerShadow),
 });
 
 export interface MapPoint {
