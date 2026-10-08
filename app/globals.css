@@ -135,7 +135,8 @@ body {
   color: color-mix(in oklch, var(--color-ink-100) 60%, transparent);
 }
 
-.glass-input:focus {
+.glass-input:focus,
+.glass-input:focus-within {
   outline: none;
   border-color: color-mix(in oklch, white 55%, var(--color-ink-900));
   box-shadow: 0 0 0 3px color-mix(in oklch, white 18%, transparent);
