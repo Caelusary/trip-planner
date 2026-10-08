@@ -264,7 +264,7 @@ export function TopAttractions() {
             type="button"
             onClick={() => setQuery("")}
             aria-label="Clear search"
-            className="shrink-0 text-white/40 hover:text-white"
+            className="-my-2 -mr-3 flex h-11 w-11 shrink-0 items-center justify-center text-white/40 hover:text-white"
           >
             ×
           </button>
