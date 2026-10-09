@@ -205,16 +205,27 @@ export function CarouselStack({ items, selectedIds, onToggleSelect }: CarouselSt
         than a visible seam.
       */}
       <div
-        className="relative isolate mx-auto h-[29rem] w-full max-w-5xl overflow-hidden [container-type:inline-size] [perspective:1200px]"
-        style={{
-          maskImage: `linear-gradient(to right, transparent 0%, black ${EDGE_FADE_PCT}%, black ${100 - EDGE_FADE_PCT}%, transparent 100%)`,
-          WebkitMaskImage: `linear-gradient(to right, transparent 0%, black ${EDGE_FADE_PCT}%, black ${100 - EDGE_FADE_PCT}%, transparent 100%)`,
-        }}
+        className="relative isolate mx-auto h-[29rem] w-full max-w-5xl [container-type:inline-size] [perspective:1200px]"
         tabIndex={0}
         onKeyDown={(event) => {
           if(event.key === "ArrowLeft") step(-1);
           if(event.key === "ArrowRight") step(1);
         }}
+        >
+        {/*
+          The mask + clip live on this inner wrapper, not the outer stage —
+          the prev/next buttons below are positioned at the outer stage's own
+          left-2/right-2 edges, exactly where a mask on their own container
+          would fade them toward transparent along with the cards. Keeping
+          them as a sibling (not a descendant) of the masked box means they
+          stay at full opacity regardless of the card fan's edge fade.
+        */}
+        <div
+          className="absolute inset-0 overflow-hidden"
+          style={{
+            maskImage: `linear-gradient(to right, transparent 0%, black ${EDGE_FADE_PCT}%, black ${100 - EDGE_FADE_PCT}%, transparent 100%)`,
+            WebkitMaskImage: `linear-gradient(to right, transparent 0%, black ${EDGE_FADE_PCT}%, black ${100 - EDGE_FADE_PCT}%, transparent 100%)`,
+          }}
         >
         {visible.map(({ item, slot }) => {
           const style = styleForSlot(slot, slot === 0 ? dragPx : 0);
@@ -456,24 +467,29 @@ export function CarouselStack({ items, selectedIds, onToggleSelect }: CarouselSt
             </div>
           );
         })}
+        </div>
 
         <button
           type="button"
           aria-label="Previous destination"
           disabled={!canNavigate}
           onClick={() => step(-1)}
-          className="absolute top-1/2 left-2 z-50 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-ink-900/90 text-lg text-white shadow-lg backdrop-blur transition enabled:hover:scale-105 enabled:hover:bg-ink-800 disabled:cursor-not-allowed disabled:opacity-30"
+          className="border-ink-900/10 absolute top-1/2 left-2 z-50 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border-2 bg-white text-ink-900 shadow-[0_2px_8px_rgba(0,0,0,0.35),0_0_0_4px_rgba(0,0,0,0.15)] transition enabled:hover:scale-110 enabled:hover:bg-accent-400 disabled:cursor-not-allowed disabled:opacity-30"
         >
-          ‹
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M15 5l-7 7 7 7" />
+          </svg>
         </button>
         <button
           type="button"
           aria-label="Next destination"
           disabled={!canNavigate}
           onClick={() => step(1)}
-          className="absolute top-1/2 right-2 z-50 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-ink-900/90 text-lg text-white shadow-lg backdrop-blur transition enabled:hover:scale-105 enabled:hover:bg-ink-800 disabled:cursor-not-allowed disabled:opacity-30"
+          className="border-ink-900/10 absolute top-1/2 right-2 z-50 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border-2 bg-white text-ink-900 shadow-[0_2px_8px_rgba(0,0,0,0.35),0_0_0_4px_rgba(0,0,0,0.15)] transition enabled:hover:scale-110 enabled:hover:bg-accent-400 disabled:cursor-not-allowed disabled:opacity-30"
         >
-          ›
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M9 5l7 7-7 7" />
+          </svg>
         </button>
       </div>
 
