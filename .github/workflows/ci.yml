@@ -34,3 +34,42 @@ jobs:
       # succeeds without them. This only validates that the app compiles —
       # it is not a substitute for Vercel's own deploy-time build.
       - run: npm run build
+
+  # The main journeys clicked through on a phone and a desktop viewport
+  # against the production build, with axe scans and CSP checks. Supabase
+  # is replaced by a local mock (e2e/mock-supabase.mjs), so no secrets are
+  # needed and nothing touches the live project.
+  e2e:
+    runs-on: ubuntu-latest
+    needs: lint-test-build
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: pw-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - run: npx playwright install --with-deps chromium
+
+      - run: npm run e2e
+        env:
+          CI: "true"
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report
+            test-results
+          retention-days: 7
