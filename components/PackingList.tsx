@@ -50,7 +50,7 @@ export function PackingList({
         type="button"
         onClick={handleGenerate}
         disabled={pending}
-        className="self-start rounded-md border border-white/30 px-3 py-1.5 text-sm text-white/90 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+        className="inline-flex min-h-11 items-center self-start rounded-md border border-white/30 px-3 py-1.5 text-sm text-white/90 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
       >
         Suggest packing items
       </button>
@@ -60,9 +60,9 @@ export function PackingList({
           {items.map((item) => (
             <li
               key={item.id}
-              className="flex items-center justify-between gap-2 rounded-lg bg-white/5 px-3 py-2"
+              className="flex items-center justify-between gap-2 rounded-lg bg-white/5 pl-3"
             >
-              <label className="flex min-w-0 flex-1 items-center gap-2 text-sm">
+              <label className="flex min-h-11 min-w-0 flex-1 cursor-pointer items-center gap-3 text-sm">
                 <input
                   type="checkbox"
                   checked={item.checked}
@@ -77,7 +77,7 @@ export function PackingList({
                 type="button"
                 onClick={() => handleDelete(item.id)}
                 aria-label={`Remove ${item.label}`}
-                className="shrink-0 px-1 text-white/40 hover:text-white/80"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-white/60 hover:bg-white/10 hover:text-white"
               >
                 ×
               </button>
