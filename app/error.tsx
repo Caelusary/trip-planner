@@ -1,43 +1,45 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect } from "react";
+import {
+  StatusPanel,
+  STATUS_BUTTON_GHOST,
+  STATUS_BUTTON_PRIMARY,
+  userFacingMessage,
+} from "@/components/StatusPanel";
 
 /**
- * Root-level fallback for routes outside app/trips/ (/, /login, /signup).
- * app/trips/error.tsx handles the trip CRUD flows specifically so the
- * <Header> keeps rendering there; this is just a safety net so an
- * unexpected throw anywhere else doesn't fall through to Next's bare
- * default error page.
+ * Root-level fallback for routes outside app/trips/ (/, /login, /signup,
+ * /shared). app/trips/error.tsx handles the trip flows so the nav keeps
+ * rendering there; this is the safety net everywhere else.
  */
 export default function RootError({
   error,
-  reset,
+  unstable_retry,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  unstable_retry: () => void;
 }) {
   useEffect(() => {
     console.error("Unhandled error:", error);
   }, [error]);
 
   return (
-    <main className="flex flex-1 items-center justify-center p-6">
-      <div className="glass-card flex w-full max-w-sm flex-col items-start gap-3 p-8">
-        <h1 className="font-display text-lg font-semibold">Something went wrong</h1>
-        <p
-          role="alert"
-          className="border-danger-400/40 bg-danger-500/20 text-danger-300 w-full rounded-md border px-3 py-2 text-sm"
-        >
-          {error.message || "Please try again."}
-        </p>
-        <button
-          type="button"
-          onClick={reset}
-          className="inline-flex min-h-11 items-center justify-center rounded-md border border-white/30 px-3 py-1.5 text-sm text-white/90 transition hover:bg-white/10"
-        >
+    <main id="main" className="flex flex-1 items-center justify-center p-6">
+      <StatusPanel
+        status="Delayed"
+        title="Something went wrong"
+        body={userFacingMessage(error, "This page hit a snag. Try again in a moment.")}
+        alert
+      >
+        <button type="button" onClick={() => unstable_retry()} className={STATUS_BUTTON_PRIMARY}>
           Try again
         </button>
-      </div>
+        <Link href="/" className={STATUS_BUTTON_GHOST}>
+          Go home
+        </Link>
+      </StatusPanel>
     </main>
   );
 }
