@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 
 interface PackingItemView {
@@ -13,6 +13,7 @@ interface PackingListProps {
   items: PackingItemView[];
   addAction: (formData: FormData) => Promise<void>;
   toggleAction: (itemId: string, checked: boolean) => Promise<void>;
+  renameAction: (itemId: string, label: string) => Promise<void>;
   deleteAction: (itemId: string) => Promise<void>;
   generateAction: () => Promise<void>;
 }
@@ -21,14 +22,35 @@ export function PackingList({
   items,
   addAction,
   toggleAction,
+  renameAction,
   deleteAction,
   generateAction,
 }: PackingListProps) {
   const [pending, startTransition] = useTransition();
+  // The item currently being renamed (its in-progress edit text), only one
+  // item at a time, so a plain id + draft pair is enough rather than a map.
+  const [editing, setEditing] = useState<{ id: string; label: string } | null>(null);
 
   function handleToggle(itemId: string, checked: boolean) {
     startTransition(async () => {
       await toggleAction(itemId, checked);
+    });
+  }
+
+  function startEditing(item: PackingItemView) {
+    setEditing({ id: item.id, label: item.label });
+  }
+
+  function commitEdit() {
+    if (!editing) return;
+    const label = editing.label.trim();
+    const original = items.find((item) => item.id === editing.id)?.label;
+    setEditing(null);
+    // Skip the round trip for a no-op edit (blank or unchanged): an empty
+    // label would also just fail server-side validation.
+    if (!label || label === original) return;
+    startTransition(async () => {
+      await renameAction(editing.id, label);
     });
   }
 
@@ -62,17 +84,48 @@ export function PackingList({
               key={item.id}
               className="flex items-center justify-between gap-2 rounded-lg bg-white/5 pl-3"
             >
-              <label className="flex min-h-11 min-w-0 flex-1 cursor-pointer items-center gap-3 text-sm">
-                <input
+              <div className="flex min-h-11 min-w-0 flex-1 items-center gap-1 text-sm">
+                {/* The label pads the small native checkbox out to a 44px tap target. */}
+                <label className="-ml-3 flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center">
+                  <input
                   type="checkbox"
                   checked={item.checked}
                   onChange={(event) => handleToggle(item.id, event.target.checked)}
+                  aria-label={item.checked ? `Mark ${item.label} as not packed` : `Mark ${item.label} as packed`}
                   className="accent-accent-500 h-4 w-4 shrink-0"
-                />
-                <span className={`truncate ${item.checked ? "text-white/40 line-through" : "text-white/90"}`}>
-                  {item.label}
-                </span>
-              </label>
+                  />
+                </label>
+                {editing?.id === item.id ? (
+                  <input
+                    type="text"
+                    autoFocus
+                    value={editing.label}
+                    onChange={(event) => setEditing({ id: item.id, label: event.target.value })}
+                    onBlur={commitEdit}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        commitEdit();
+                      } else if (event.key === "Escape") {
+                        setEditing(null);
+                      }
+                    }}
+                    className="glass-input min-h-11 min-w-0 flex-1 px-2 py-1 text-sm"
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => startEditing(item)}
+                    aria-label={`Rename ${item.label}`}
+                    title="Click to rename"
+                    className={`min-h-11 min-w-0 flex-1 truncate rounded px-1 py-0.5 text-left transition hover:bg-white/10 ${
+                      item.checked ? "text-white/40 line-through" : "text-white/90"
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                )}
+              </div>
               <button
                 type="button"
                 onClick={() => handleDelete(item.id)}
@@ -86,7 +139,7 @@ export function PackingList({
         </ul>
       ) : (
         <p className="text-sm text-white/70">
-          Nothing yet — add an item below or generate suggestions.
+          Nothing yet. Add an item below or get suggestions.
         </p>
       )}
 
