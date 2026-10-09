@@ -37,16 +37,16 @@ export default async function SharedTripPage({
   const typedStops = (stops ?? []) as TripStop[];
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-8">
+    <main id="main" className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-8">
       <div className="print:hidden flex items-center justify-between gap-4">
-        <Link href="/" className="font-display text-sm font-semibold text-white/70 hover:text-white">
+        <Link href="/" className="font-display inline-flex min-h-11 items-center text-sm font-semibold text-white/80 hover:text-white">
           Trip Planner
         </Link>
         <TripPassActions tripName={typedTrip.name} destinationCity={typedTrip.destination_city} />
       </div>
 
-      <p className="print:hidden text-xs text-white/50">
-        You&rsquo;re viewing a shared, read-only trip — you&rsquo;ll need your own account to plan one.
+      <p className="print:hidden text-xs text-white/70">
+        You&rsquo;re viewing a shared, read-only trip. You&rsquo;ll need your own account to plan one.
       </p>
 
       <section className="glass-card enter overflow-hidden">
@@ -55,17 +55,17 @@ export default async function SharedTripPage({
             <span className="font-display text-accent-400 text-3xl font-semibold tracking-wide">
               {cityCode(typedTrip.destination_city)}
             </span>
-            <span className="text-[10px] tracking-widest text-white/60 uppercase">Destination</span>
+            <span className="ticket-label">Destination</span>
           </div>
           <div className="flex min-w-0 flex-1 flex-col gap-1 px-6 py-6">
-            <p className="text-accent-400 text-xs font-semibold tracking-widest uppercase">Trip Pass</p>
+            <p className="ticket-label !text-accent-400">Trip Pass</p>
             <h1 className="font-display truncate text-2xl font-semibold">{typedTrip.name}</h1>
             <p className="text-sm text-white/70">{typedTrip.destination_city}</p>
           </div>
         </div>
 
         <div className="border-t border-dashed border-white/15 px-6 py-5">
-          <p className="text-[10px] tracking-widest text-white/50 uppercase">Travel dates</p>
+          <p className="ticket-label">Travel dates</p>
           <p className="text-sm text-white/90">
             {formatDateRange(typedTrip.start_date, typedTrip.end_date)}
           </p>
@@ -73,16 +73,16 @@ export default async function SharedTripPage({
 
         {typedStops.length > 0 && (
           <div className="border-t border-dashed border-white/15 px-6 py-5">
-            <p className="mb-3 text-[10px] tracking-widest text-white/50 uppercase">Itinerary</p>
+            <p className="mb-3 ticket-label">Itinerary</p>
             <div className="flex flex-col gap-3">
               {typedStops.map((stop, i) => (
                 <div key={stop.id} className="flex items-baseline gap-3 text-sm">
                   <span className="text-accent-400 w-5 shrink-0 text-right font-medium">{i + 1}</span>
                   <span className="min-w-0 flex-1 truncate text-white/90">
                     {stop.city}
-                    <span className="text-white/50"> · {STOP_TYPE_LABEL[stop.stop_type]}</span>
+                    <span className="text-white/65"> · {STOP_TYPE_LABEL[stop.stop_type]}</span>
                   </span>
-                  <span className="shrink-0 text-white/60">
+                  <span className="ticket-data shrink-0 text-white/75">
                     {formatDateRange(stop.arrival_date, stop.departure_date) || "No dates set"}
                   </span>
                 </div>
@@ -92,11 +92,11 @@ export default async function SharedTripPage({
         )}
 
         <div className="border-t border-dashed border-white/15 px-6 py-4">
-          <p className="text-center text-[10px] tracking-widest text-white/40 uppercase">
+          <p className="text-center ticket-label">
             Shared via Trip Planner
           </p>
         </div>
       </section>
-    </div>
+    </main>
   );
 }
