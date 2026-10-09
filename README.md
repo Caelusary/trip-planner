@@ -33,6 +33,11 @@ A small trip-planning app: create trips with a destination and date range, add m
 
    Open http://localhost:3000.
 
+## Tests
+
+- `npm test`: unit tests (Vitest).
+- `npm run e2e`: Playwright against the production build on a Pixel 7 and a desktop viewport, with an axe accessibility scan of every main screen, tap-target and sideways-scroll checks, and a fail on any CSP violation. Supabase is replaced by a local in-memory mock (`e2e/mock-supabase.mjs`), so it needs no secrets and never touches the live project. First run: `npx playwright install chromium`.
+
 ## Deployment (Vercel)
 
 - Repo: `Zachyy-boi/trip-planner`, branch `main` auto-deploys.
