@@ -8,11 +8,11 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
   invalid_credentials: "Incorrect email or password.",
   email_not_confirmed: "Please confirm your email before logging in.",
   user_already_exists: "An account with that email already exists.",
-  weak_password: "Password is too weak — use at least 6 characters.",
-  over_email_send_rate_limit: "Too many attempts — please wait a moment and try again.",
+  weak_password: "Password is too weak. Use at least 6 characters.",
+  over_email_send_rate_limit: "Too many attempts. Please wait a moment and try again.",
   email_address_invalid: "That email address doesn't look valid.",
   invalid_input: "Please enter a valid email and password (at least 6 characters).",
-  rate_limited: "Too many attempts — please wait a minute and try again.",
+  rate_limited: "Too many attempts. Please wait a minute and try again.",
 };
 
 const DEFAULT_CODE = "unknown";
@@ -29,7 +29,7 @@ export function authErrorMessage(code: string | undefined): string {
 
 // Same allowlist principle as AUTH_ERROR_MESSAGES above, for non-error banners.
 const NOTICE_MESSAGES: Record<string, string> = {
-  confirmation_resent: "Confirmation email resent — check your inbox (and spam folder).",
+  confirmation_resent: "Confirmation email resent. Check your inbox (and spam folder).",
 };
 
 export function authNoticeMessage(code: string | undefined): string | null {
