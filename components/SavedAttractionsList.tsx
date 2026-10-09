@@ -8,6 +8,8 @@ import { addAttractionToTrip } from "@/actions/trips";
 import { RetryImage } from "@/components/RetryImage";
 import { SubmitButton } from "@/components/SubmitButton";
 import type { TripCardTrip } from "@/components/TripCard";
+import { PageHeader } from "@/components/PageHeader";
+import { EmptyState } from "@/components/EmptyState";
 
 interface SavedAttractionsListProps {
   /** The signed-in user's upcoming trips, for the "add to trip" picker on each card — empty when signed out or with no upcoming trips. */
@@ -39,20 +41,42 @@ export function SavedAttractionsList({ trips }: SavedAttractionsListProps) {
     });
   }
 
-  if (savedIds === null) {
-    return null;
-  }
-
-  const saved: Attraction[] = allAttractions().filter((a) => savedIds.has(a.id));
+  const saved: Attraction[] | null = savedIds
+    ? allAttractions().filter((a) => savedIds.has(a.id))
+    : null;
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-6 pt-4">
-      <h1 className="font-display text-xl font-semibold">Saved</h1>
+    <div className="mx-auto flex max-w-5xl flex-col gap-8">
+      <PageHeader
+        title="Saved"
+        meta={
+          saved && saved.length > 0
+            ? `${saved.length} ${saved.length === 1 ? "place" : "places"} on your shortlist. Add one to a trip, or plan a new trip around it.`
+            : "Your shortlist of places to go, kept on this device."
+        }
+      />
 
-      {saved.length === 0 ? (
-        <p className="glass-card p-6 text-center text-sm text-white/70">
-          Nothing saved yet — tap &ldquo;Add to Trip&rdquo; on any destination to save it here.
-        </p>
+      {saved === null ? (
+        // localStorage is only readable after mount; hold the layout with
+        // card-shaped placeholders instead of rendering nothing.
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2" role="status" aria-label="Loading saved places">
+          {[0, 1].map((i) => (
+            <div key={i} className="glass-card flex flex-col overflow-hidden">
+              <div className="skeleton h-32 w-full !rounded-none" />
+              <div className="flex flex-col gap-2 p-4">
+                <span className="skeleton h-4 w-1/2" />
+                <span className="skeleton h-3 w-1/3" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : saved.length === 0 ? (
+        <EmptyState
+          code="♡"
+          title="Nothing saved yet"
+          body="Tap Add to Trip on any attraction card and it lands here, ready to drop into a trip or plan a new one around."
+          actions={[{ href: "/trips", label: "Browse attractions", primary: true }]}
+        />
       ) : (
         <div className="stagger grid grid-cols-1 gap-4 sm:grid-cols-2">
           {saved.map((attraction) => (
@@ -115,7 +139,7 @@ export function SavedAttractionsList({ trips }: SavedAttractionsListProps) {
                   <div className="flex items-center justify-between gap-2">
                     <Link
                       href={`/trips/plan?destination=${encodeURIComponent(`${attraction.city}, ${attraction.country}`)}`}
-                      className="text-accent-400 text-xs font-semibold underline-offset-2 hover:underline"
+                      className="text-accent-400 -ml-1 inline-flex min-h-11 items-center px-1 text-sm font-semibold underline-offset-2 hover:underline"
                     >
                       Plan a new trip here
                     </Link>
@@ -123,7 +147,7 @@ export function SavedAttractionsList({ trips }: SavedAttractionsListProps) {
                       type="button"
                       onClick={() => unsave(attraction.id)}
                       aria-label={`Remove ${attraction.name} from saved`}
-                      className="rounded-md px-2 py-1 text-xs text-white/50 transition hover:bg-white/10 hover:text-white/80"
+                      className="inline-flex min-h-11 items-center rounded-md px-3 text-sm text-white/70 transition hover:bg-white/10 hover:text-white"
                     >
                       Remove
                     </button>
