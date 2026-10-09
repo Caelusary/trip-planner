@@ -107,6 +107,22 @@ export function isSupportedCountry(value: unknown): value is CountryCode {
   return typeof value === "string" && value in COUNTRY_NAMES;
 }
 
+/**
+ * Recovers the ISO country code from a geocoded destination label, e.g.
+ * "Kyoto, Kyoto, JP" -> "JP". Labels are built in lib/weather.ts's
+ * `fetchGeoResults` as `[name, state, country].join(", ")`, where `country`
+ * is already the ISO 3166-1 alpha-2 code OpenWeatherMap's geocoding API
+ * returns, so the trailing comma segment IS the code, no separate lookup
+ * needed. Returns null for anything that didn't come through that geocoder
+ * (a manually-typed destination that failed to geocode, or a code this app
+ * doesn't have attraction data for).
+ */
+export function countryCodeFromLabel(label: string): CountryCode | null {
+  const segments = label.split(",");
+  const last = segments[segments.length - 1]?.trim().toUpperCase();
+  return isSupportedCountry(last) ? last : null;
+}
+
 type RawAttraction = Omit<Attraction, "image" | "activities"> & {
   activities: string[];
 };
