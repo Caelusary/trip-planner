@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { signup } from "@/actions/auth";
 import { SubmitButton } from "@/components/SubmitButton";
+import { AuthShell } from "@/components/AuthShell";
 import { authErrorMessage } from "@/lib/auth-errors";
 
 export default async function SignupPage({
@@ -11,9 +12,9 @@ export default async function SignupPage({
   const { error } = await searchParams;
 
   return (
-    <main className="flex flex-1 items-center justify-center p-6">
-      <div className="glass-card enter w-full max-w-sm p-8">
-        <h1 className="font-display mb-1 text-2xl font-semibold">Create your account</h1>
+    <AuthShell>
+      <div className="glass-card enter w-full max-w-sm p-7 sm:p-8">
+        <h1 className="font-display mb-1 text-[1.625rem] leading-tight font-semibold">Create your account</h1>
         <p className="mb-6 text-sm text-white/70">
           Start planning trips and tracking weather for every stop.
         </p>
@@ -63,6 +64,6 @@ export default async function SignupPage({
           </Link>
         </p>
       </div>
-    </main>
+    </AuthShell>
   );
 }
