@@ -125,7 +125,10 @@ export function TopNav({ email }: { email: string | null }) {
       <div className="mx-auto flex h-16 max-w-5xl items-center justify-between gap-2 px-4 md:px-8">
         <Link
           href="/trips"
-          className="flex shrink-0 items-center gap-2 rounded-md transition hover:opacity-80"
+          // The wordmark is hidden on phones, which left this link with no
+          // accessible name there (axe: link-name).
+          aria-label="Trip Planner home"
+          className="flex min-h-11 min-w-11 shrink-0 items-center gap-2 rounded-md transition hover:opacity-80"
         >
           <LogoMark className="text-accent-400 h-5 w-5 shrink-0" />
           <span className="font-display hidden text-lg font-semibold tracking-tight sm:inline">
@@ -143,7 +146,7 @@ export function TopNav({ email }: { email: string | null }) {
                 onClick={() => recordDirection(index)}
                 aria-current={isActive ? "page" : undefined}
                 aria-label={tab.label}
-                className={`flex h-11 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-sm transition sm:px-3 ${
+                className={`flex h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-md px-2.5 text-sm transition sm:px-3 ${
                   isActive
                     ? "bg-accent-400/15 text-white font-medium"
                     : "text-white/70 hover:bg-white/5 hover:text-white"
