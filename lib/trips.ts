@@ -1,6 +1,7 @@
 import type { createClient } from "@/lib/supabase/server";
 import type { TripCardTrip } from "@/components/TripCard";
 import type { StopType } from "@/lib/stopTypes";
+import { throwSafeDbError } from "@/lib/tripAuth";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
@@ -56,7 +57,11 @@ export async function fetchTripDetail(
   tripId: string,
   userId: string,
 ): Promise<{ trip: Trip | null; stops: TripStop[]; packingItems: PackingItem[] }> {
-  const [{ data: trip }, { data: stops }, { data: packingItems }] = await Promise.all([
+  const [
+    { data: trip, error: tripError },
+    { data: stops, error: stopsError },
+    { data: packingItems, error: packingError },
+  ] = await Promise.all([
     supabase.from("trips").select("*").eq("id", tripId).eq("user_id", userId).maybeSingle(),
     supabase
       .from("trip_stops")
@@ -69,6 +74,10 @@ export async function fetchTripDetail(
       .eq("trip_id", tripId)
       .order("position", { ascending: true }),
   ]);
+  // Without this an outage reads as "trip not found" (a 404) or an empty
+  // itinerary, both of which tell the user something false.
+  const failed = tripError ?? stopsError ?? packingError;
+  if (failed) throwSafeDbError(failed, "load this trip");
   return { trip: trip ?? null, stops: stops ?? [], packingItems: packingItems ?? [] };
 }
 
@@ -90,13 +99,17 @@ export async function fetchUpcomingTrips(
   supabase: SupabaseServerClient,
   userId: string,
 ): Promise<TripCardTrip[]> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("trips")
     .select(TRIP_LIST_COLUMNS)
     .eq("user_id", userId)
     .gte("end_date", todayISODate())
     .order("start_date", { ascending: true })
     .limit(TRIP_LIST_LIMIT);
+  // A failed query must surface as an error (app/trips/error.tsx), not
+  // fall through to the "No trips yet" empty state as if the account
+  // were new.
+  if (error) throwSafeDbError(error, "load your trips");
   return data ?? [];
 }
 
@@ -105,12 +118,13 @@ export async function fetchPastTrips(
   supabase: SupabaseServerClient,
   userId: string,
 ): Promise<TripCardTrip[]> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("trips")
     .select(TRIP_LIST_COLUMNS)
     .eq("user_id", userId)
     .lt("end_date", todayISODate())
     .order("start_date", { ascending: false })
     .limit(TRIP_LIST_LIMIT);
+  if (error) throwSafeDbError(error, "load your trip history");
   return data ?? [];
 }
