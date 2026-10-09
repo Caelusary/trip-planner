@@ -26,6 +26,8 @@ const WEEKDAY_MONTH_DAY = new Intl.DateTimeFormat("en-US", {
 
 const DAY = new Intl.DateTimeFormat("en-US", { day: "numeric", timeZone: "UTC" });
 
+const WEEKDAY_SHORT = new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone: "UTC" });
+
 function parseISODate(iso: string | null | undefined): Date | null {
   if (!iso) return null;
   const date = new Date(`${iso}T00:00:00Z`);
@@ -36,6 +38,12 @@ function parseISODate(iso: string | null | undefined): Date | null {
 export function formatDayShort(iso: string | null | undefined): string {
   const date = parseISODate(iso);
   return date ? WEEKDAY_MONTH_DAY.format(date) : "";
+}
+
+/** "2026-07-09" -> "Thu" (for the compact forecast card grid) */
+export function formatWeekdayShort(iso: string | null | undefined): string {
+  const date = parseISODate(iso);
+  return date ? WEEKDAY_SHORT.format(date) : "";
 }
 
 /**
