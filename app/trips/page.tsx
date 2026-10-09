@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { preconnect } from "react-dom";
 import { getCurrentUser } from "@/lib/supabase/user";
 import { TopAttractions } from "@/components/TopAttractions";
+import { PageHeader } from "@/components/PageHeader";
 
 export default async function TripsPage() {
   // Warm the connection for the carousel's picsum.photos placeholder
@@ -15,15 +15,13 @@ export default async function TripsPage() {
   if (!user) redirect("/login");
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-8 pt-4">
-      <h1 className="sr-only">Your trips</h1>
+    <div className="mx-auto flex max-w-5xl flex-col gap-8">
+      <PageHeader
+        title="Where to next?"
+        meta="Top attractions by country. Save the ones you like, then plan a trip around them."
+        action={{ href: "/trips/plan", label: "Plan a new trip" }}
+      />
       <TopAttractions />
-      <Link
-        href="/trips/plan"
-        className="bg-accent-500 hover:bg-accent-400 text-ink-950 flex min-h-11 items-center justify-center rounded-md px-4 text-sm font-semibold transition"
-      >
-        Plan a new trip
-      </Link>
     </div>
   );
 }
