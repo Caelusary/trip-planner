@@ -22,7 +22,7 @@ export function TripPassActions({ tripName, destinationCity }: TripPassActionsPr
   async function handleShare() {
     const url = window.location.href;
     const shareData = {
-      title: `${tripName} — Trip Pass`,
+      title: `${tripName}: Trip Pass`,
       text: `My trip to ${destinationCity}`,
       url,
     };
