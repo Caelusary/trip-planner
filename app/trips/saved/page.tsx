@@ -15,7 +15,9 @@ export default async function SavedPage() {
   let trips: TripCardTrip[] = [];
   if (user) {
     const supabase = await createClient();
-    trips = await fetchUpcomingTrips(supabase, user.id);
+    // Saved attractions still work from localStorage if this fails; the
+    // picker just has no trips to offer.
+    trips = await fetchUpcomingTrips(supabase, user.id).catch(() => []);
   }
 
   return <SavedAttractionsList trips={trips} />;
