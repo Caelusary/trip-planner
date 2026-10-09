@@ -64,7 +64,7 @@ export function AddStopForm({ action }: AddStopFormProps) {
       <button
         type="button"
         onClick={() => setShowParser((v) => !v)}
-        className="self-start text-xs font-medium text-white/60 underline-offset-2 hover:text-white/90 hover:underline"
+        className="-ml-1 inline-flex min-h-11 items-center self-start px-1 text-sm font-medium text-white/75 underline underline-offset-4 decoration-white/30 hover:text-white hover:decoration-white/70"
       >
         {showParser ? "Hide" : "Paste a confirmation email instead"}
       </button>
@@ -72,7 +72,7 @@ export function AddStopForm({ action }: AddStopFormProps) {
       {showParser && (
         <div className="glass-card flex flex-col gap-2 p-4">
           <p className="text-xs text-white/60">
-            Paste flight/hotel/reservation confirmation text below — this is a
+            Paste flight/hotel/reservation confirmation text below. This is a
             best-effort guess (no AI, just pattern matching), so double-check
             the fields it fills in before adding the stop.
           </p>
@@ -87,7 +87,7 @@ export function AddStopForm({ action }: AddStopFormProps) {
             type="button"
             onClick={handleParse}
             disabled={!parserText.trim()}
-            className="self-start rounded-md border border-white/30 px-3 py-1.5 text-sm text-white/90 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex min-h-11 items-center self-start rounded-md border border-white/30 px-3 py-1.5 text-sm text-white/90 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Parse
           </button>
