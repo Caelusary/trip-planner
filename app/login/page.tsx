@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { login, resendConfirmation } from "@/actions/auth";
 import { SubmitButton } from "@/components/SubmitButton";
+import { AuthShell } from "@/components/AuthShell";
 import { authErrorMessage, authNoticeMessage } from "@/lib/auth-errors";
 
 export default async function LoginPage({
@@ -12,15 +13,15 @@ export default async function LoginPage({
   const noticeMessage = authNoticeMessage(notice);
 
   return (
-    <main className="flex flex-1 items-center justify-center p-6">
-      <div className="glass-card enter w-full max-w-sm p-8">
-        <h1 className="font-display mb-1 text-2xl font-semibold">Welcome back</h1>
+    <AuthShell>
+      <div className="glass-card enter w-full max-w-sm p-7 sm:p-8">
+        <h1 className="font-display mb-1 text-[1.625rem] leading-tight font-semibold">Welcome back</h1>
         <p className="mb-6 text-sm text-white/70">Log in to plan your next trip.</p>
 
         {noticeMessage && (
           <p
             role="status"
-            className="border-accent-400/40 bg-accent-500/10 text-accent-300 mb-4 rounded-md border px-3 py-2 text-sm"
+            className="border-accent-400/40 bg-accent-500/10 text-accent-400 mb-4 rounded-md border px-3 py-2 text-sm"
           >
             {noticeMessage}
           </p>
@@ -98,6 +99,6 @@ export default async function LoginPage({
           </Link>
         </p>
       </div>
-    </main>
+    </AuthShell>
   );
 }
