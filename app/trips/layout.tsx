@@ -23,7 +23,9 @@ export default async function TripsLayout({ children }: { children: React.ReactN
           in normal flow, so content just flows below it with no
           compensating padding needed (the old fixed BottomNav needed a
           pb-28 hack here for exactly that reason; this doesn't). */}
-      <div className="min-w-0 flex-1 px-4 py-8 md:px-8">{children}</div>
+      <main id="main" className="min-w-0 flex-1 px-4 pt-6 pb-16 md:px-8 md:pt-10">
+        {children}
+      </main>
     </div>
   );
 }
