@@ -1,28 +1,62 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
 import { preconnect } from "react-dom";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/supabase/user";
-import { addStop, deleteStop, deleteTrip, setTripSharing } from "@/actions/trips";
+import { addStop, addSuggestedStop, deleteStop, deleteTrip, setTripSharing } from "@/actions/trips";
 import {
   addPackingItem,
   deletePackingItem,
   generatePackingSuggestions,
+  renamePackingItem,
   togglePackingItem,
 } from "@/actions/packing";
 import { forecastForDateRange, getForecast } from "@/lib/weather";
-import { fetchTripDetail } from "@/lib/trips";
+import { fetchTripDetail, type Trip } from "@/lib/trips";
 import { cityCode, formatDateRange, tripCountdownLabel } from "@/lib/format";
 import { SubmitButton } from "@/components/SubmitButton";
 import { DeleteTripButton } from "@/components/DeleteTripButton";
 import { AddToCalendarButton } from "@/components/AddToCalendarButton";
 import { AddStopForm } from "@/components/AddStopForm";
-import { WeatherHorizon } from "@/components/WeatherHorizon";
+import { SuggestedStops } from "@/components/SuggestedStops";
+import { suggestStopsForTrip } from "@/lib/stopSuggestions";
+import { WeatherForecast, WeatherForecastSkeleton } from "@/components/WeatherForecast";
 import { TripMapLoader } from "@/components/TripMapLoader";
 import type { MapPoint } from "@/components/TripMap";
 import { ShareTripToggle } from "@/components/ShareTripToggle";
 import { PackingList } from "@/components/PackingList";
 import { STOP_TYPE_LABEL } from "@/lib/stopTypes";
+
+/**
+ * Its own Suspense boundary (see the section below) so the OpenWeatherMap
+ * round trip, an external network call, the slowest single thing this page
+ * does, doesn't block the header/map/stops/packing list from rendering.
+ * Those all come from the one Supabase query already awaited above this
+ * component; only the forecast fetch is deferred.
+ */
+async function WeatherSection({ trip }: { trip: Trip }) {
+  if (trip.destination_lat == null || trip.destination_lon == null) {
+    return <p className="text-sm text-white/70">No weather data available for this destination.</p>;
+  }
+
+  const fullForecast = await getForecast(trip.destination_lat, trip.destination_lon);
+  const forecast = forecastForDateRange(fullForecast, trip.start_date, trip.end_date);
+
+  if (forecast.length === 0) {
+    // Two distinct reasons the trip's date range can end up with no
+    // matching days, told apart so the message doesn't blame "5 day limit"
+    // on what's actually a missing API key or an upstream outage
+    // (fullForecast itself came back empty) — see getForecast's own
+    // graceful-degradation comment in lib/weather.ts.
+    const note = fullForecast.length
+      ? "The forecast opens up closer to your trip. It only covers the next 5 days."
+      : "Weather forecast is temporarily unavailable for this destination.";
+    return <p className="text-sm text-white/70">{note}</p>;
+  }
+
+  return <WeatherForecast forecast={forecast} />;
+}
 
 export default async function TripDetailPage({
   params,
@@ -45,29 +79,16 @@ export default async function TripDetailPage({
 
   const countdown = tripCountdownLabel(trip.start_date, trip.end_date);
 
-  let forecast: Awaited<ReturnType<typeof getForecast>> = [];
-  let forecastNote: string | null = null;
-  if (trip.destination_lat != null && trip.destination_lon != null) {
-    const fullForecast = await getForecast(trip.destination_lat, trip.destination_lon);
-    forecast = forecastForDateRange(fullForecast, trip.start_date, trip.end_date);
-    if (forecast.length === 0) {
-      // Two distinct reasons the trip's date range can end up with no
-      // matching days, told apart so the message doesn't blame "5 day
-      // limit" on what's actually a missing API key or an upstream outage
-      // (fullForecast itself came back empty) — see getForecast's own
-      // graceful-degradation comment in lib/weather.ts.
-      forecastNote = fullForecast.length
-        ? "Forecast opens up closer to your trip — OpenWeatherMap only covers the next 5 days."
-        : "Weather forecast is temporarily unavailable for this destination.";
-    }
-  } else {
-    forecastNote = "No weather data available for this destination.";
-  }
-
   const deleteTripWithId = deleteTrip.bind(null, id);
   const addStopToTrip = addStop.bind(null, id);
+  const addSuggestedStopToTrip = addSuggestedStop.bind(null, id);
+  const suggestedStops = suggestStopsForTrip(
+    trip.destination_city,
+    stops.map((stop) => stop.notes).filter((notes): notes is string => Boolean(notes)),
+  );
   const addPackingItemToTrip = addPackingItem.bind(null, id);
   const togglePackingItemForTrip = togglePackingItem.bind(null, id);
+  const renamePackingItemForTrip = renamePackingItem.bind(null, id);
   const deletePackingItemForTrip = deletePackingItem.bind(null, id);
   const generatePackingSuggestionsForTrip = generatePackingSuggestions.bind(null, id);
 
@@ -131,11 +152,9 @@ export default async function TripDetailPage({
         <h2 className="font-display mb-4 text-lg font-semibold">
           Weather for {trip.destination_city}
         </h2>
-        {forecast.length > 0 ? (
-          <WeatherHorizon forecast={forecast} />
-        ) : (
-          <p className="text-sm text-white/70">{forecastNote}</p>
-        )}
+        <Suspense fallback={<WeatherForecastSkeleton />}>
+          <WeatherSection trip={trip} />
+        </Suspense>
       </section>
 
       <section className="glass-card enter p-6">
@@ -145,6 +164,7 @@ export default async function TripDetailPage({
 
       <section className="glass-card enter p-6">
         <h2 className="font-display mb-4 text-lg font-semibold">Stops</h2>
+        <SuggestedStops suggestions={suggestedStops} addAction={addSuggestedStopToTrip} />
         <AddStopForm action={addStopToTrip} />
 
         {stops?.length ? (
@@ -192,7 +212,7 @@ export default async function TripDetailPage({
           </div>
         ) : (
           <p className="text-sm text-white/70">
-            No stops yet — add your first stop above to build the itinerary.
+            No stops yet. Add your first one above to build the itinerary.
           </p>
         )}
       </section>
@@ -203,6 +223,7 @@ export default async function TripDetailPage({
           items={packingItems}
           addAction={addPackingItemToTrip}
           toggleAction={togglePackingItemForTrip}
+          renameAction={renamePackingItemForTrip}
           deleteAction={deletePackingItemForTrip}
           generateAction={generatePackingSuggestionsForTrip}
         />
