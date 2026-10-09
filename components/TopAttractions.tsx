@@ -291,8 +291,8 @@ export function TopAttractions() {
       ) : (
         <p className="glass-card w-full max-w-xs p-6 text-center text-sm text-white/70">
           {query
-            ? `No attractions match "${query}" — try a different search, category, or budget.`
-            : "No attractions match — try a different category or a wider budget."}
+            ? `No attractions match "${query}". Try a different search, category, or budget.`
+            : "No attractions match. Try a different category or a wider budget."}
         </p>
       )}
     </section>
