@@ -8,6 +8,7 @@
 //   POST /__reset          restore the fixture data
 //   POST /__empty          start from an account with no trips
 //   POST /__fail {on:bool} make every /rest/v1 call fail with a 500
+import { randomUUID } from "node:crypto";
 import http from "node:http";
 import { FIXTURE_USER, freshDb } from "./fixtures.mjs";
 
@@ -109,8 +110,9 @@ function respondRows(req, res, rows) {
 }
 
 function withDefaults(table, row) {
-  const base = { id: `${table}-${nextId++}`, created_at: new Date().toISOString() };
-  if (table === "trips") Object.assign(base, { share_token: `share-${nextId}`, share_enabled: false });
+  // Real rows get UUIDs, and the server actions reject anything else.
+  const base = { id: randomUUID(), created_at: new Date().toISOString() };
+  if (table === "trips") Object.assign(base, { share_token: `share-${nextId++}`, share_enabled: false });
   if (table === "packing_items") Object.assign(base, { checked: false });
   return { ...base, ...row };
 }
