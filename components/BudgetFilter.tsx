@@ -219,7 +219,7 @@ export function BudgetFilter({
               type="button"
               onClick={() => commitMaxUSD(presetUSD)}
               aria-pressed={isActive}
-              className={`rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ${
+              className={`min-h-11 min-w-11 rounded-full border px-3 text-xs font-medium transition-colors ${
                 isActive
                   ? "border-accent-400/40 bg-accent-400/15 text-accent-400"
                   : "border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
