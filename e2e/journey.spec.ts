@@ -115,6 +115,31 @@ test.describe("signed in", () => {
     await page.getByRole("button", { name: "Add", exact: true }).click();
     await expect(page.getByText("Umbrella")).toBeVisible();
 
+    // Rename it inline.
+    await page.getByRole("button", { name: "Rename Umbrella" }).click();
+    const renameBox = page.getByRole("listitem").getByRole("textbox");
+    await renameBox.fill("Compact umbrella");
+    await renameBox.press("Enter");
+    await expect(page.getByRole("button", { name: "Rename Compact umbrella" })).toBeVisible();
+
+    // A one-tap suggested stop lands on the itinerary and leaves the suggestions.
+    const suggestions = page.getByRole("region", { name: "Suggested stops" });
+    const firstAdd = suggestions.getByRole("button", { name: /^Add .+ as a stop$/ }).first();
+    const suggested = (await firstAdd.getAttribute("aria-label"))!.replace(/^Add | as a stop$/g, "");
+    await firstAdd.click();
+    await expect(suggestions.getByRole("button", { name: `Add ${suggested} as a stop` })).toHaveCount(0);
+    await expect(page.getByText(suggested).first()).toBeVisible();
+
+    // Sharing lives in a popover: turn the link on, the full link appears, Escape closes it.
+    await page.getByRole("button", { name: "Share" }).click();
+    const share = page.getByRole("dialog", { name: "Share this trip" });
+    await share.getByRole("radio", { name: /Anyone with the link/ }).check();
+    await expect(share.getByRole("textbox", { name: "Share link" })).toHaveValue(/^http:\/\/localhost:\d+\/shared\//);
+    await expectAccessible(page, "share popover");
+    await expectNoSidewaysScroll(page, "share popover");
+    await page.keyboard.press("Escape");
+    await expect(share).toBeHidden();
+
     await page.getByRole("link", { name: "Trip pass" }).click();
     await expect(page).toHaveURL(new RegExp(`/trips/${KYOTO_ID}/pass$`));
     await expect(page.getByText("Spring in Kyoto").first()).toBeVisible();
@@ -164,9 +189,10 @@ test.describe("signed in", () => {
     await expect(page.getByRole("link", { name: /Spring in Kyoto/ })).toBeVisible();
   });
 
-  test("a trip that isn't yours is a 404", async ({ page }) => {
+  test("a trip that isn't yours is a 404 and leaks nothing", async ({ page }) => {
     const res = await page.goto("/trips/99999999-9999-4999-8999-999999999999");
     expect(res?.status()).toBe(404);
+    await expect(page.getByRole("heading", { name: "We can't find that trip" })).toBeVisible();
   });
 });
 
