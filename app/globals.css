@@ -27,11 +27,25 @@
   /* ---------- TYPE ---------- */
   --font-display: var(--font-fraunces), Georgia, serif;
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  /* Departure-board data: dates, codes, counts, ticket labels. */
+  --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", monospace;
+
+  /* ---------- MOTION ---------- */
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 :root {
   --background: var(--color-ink-950);
   --foreground: var(--color-ink-100);
+}
+
+/* Giving <html> its own background stops <body>'s gradient from being
+   propagated to the canvas. Propagated, the gradient was sized to the
+   root element (one viewport tall, since <html> is h-full), so any page
+   longer than a screen showed a hard seam where it ended. Painted on
+   <body> itself it spans body's full, content-sized height. */
+html {
+  background-color: var(--color-ink-950);
 }
 
 body {
@@ -86,6 +100,43 @@ body {
 
 .font-display {
   font-family: var(--font-display);
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+/* ---------- Ticket typography ---------- */
+/* The small uppercase field labels on every boarding-pass surface
+   ("Destination", "Travel dates", "Itinerary"). One class so they share
+   one size, tracking and a colour that clears 4.5:1 on the glass card
+   (white/50 and white/40 didn't). */
+.ticket-label {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  line-height: 1rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: color-mix(in oklch, var(--color-ink-100) 68%, transparent);
+}
+
+/* Dates, countdowns and counts: mono with tabular figures so columns of
+   dates line up like a departures board. */
+.ticket-data {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* Page title block shared by every signed-in screen. */
+.page-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 1.2rem + 2.2vw, 2.5rem);
+  line-height: 1.1;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 .glass-card {
@@ -236,12 +287,79 @@ button:focus-visible {
   border-right: 1px dashed color-mix(in oklch, white 22%, var(--color-ink-900));
 }
 
+/* Punched notches where the stub tears off, on any glass card whose
+   first-level child is a stub. Done with a mask (not circles painted in
+   the page colour) so the holes stay true over the dusk gradient, which
+   shifts colour down the page. --stub is the stub's width. */
+.glass-card:has(> .ticket-stub) {
+  --stub: 6rem;
+  --notch: 9px;
+  -webkit-mask:
+    radial-gradient(circle var(--notch) at var(--stub) 0, #0000 96%, #000) top / 100% 51% no-repeat,
+    radial-gradient(circle var(--notch) at var(--stub) 100%, #0000 96%, #000) bottom / 100% 51% no-repeat;
+  mask:
+    radial-gradient(circle var(--notch) at var(--stub) 0, #0000 96%, #000) top / 100% 51% no-repeat,
+    radial-gradient(circle var(--notch) at var(--stub) 100%, #0000 96%, #000) bottom / 100% 51% no-repeat;
+}
+.glass-card:has(> .ticket-stub.w-28) {
+  --stub: 7rem;
+}
+
+/* ---------- Loading skeletons ---------- */
+/* A slow sheen across placeholder blocks. Only transform/opacity animate
+   (the sheen is a translated pseudo-element), and the universal
+   reduced-motion block below freezes it. */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: color-mix(in oklch, white 7%, transparent);
+  border-radius: 0.375rem;
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklch, white 9%, transparent),
+    transparent
+  );
+  animation: sheen 1.6s var(--ease-out-strong) infinite;
+}
+/* A looping animation under a backdrop-filter re-blurs the backdrop every
+   frame, which stutters on weak phones; loading cards drop the blur. */
+.glass-card:has(.skeleton) {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+@keyframes sheen {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* Tactile press on primary actions (links styled as buttons). */
+.press {
+  transition:
+    background-color 150ms var(--ease-out-strong),
+    transform 120ms var(--ease-out-strong);
+}
+.press:active {
+  transform: scale(0.97);
+}
+
 /* ---------- Trip Pass print output ---------- */
 /* The app's whole palette is dark-mode-first (light text on a translucent
    dark card), which is illegible and wastes ink on paper — the Trip Pass
    route is the one place someone actually prints, so force it back to
    plain black-on-white for @media print specifically. */
 @media print {
+  .glass-card:has(> .ticket-stub) {
+    -webkit-mask: none;
+    mask: none;
+  }
   body {
     background: white !important;
   }
@@ -347,4 +465,14 @@ button:focus-visible {
 }
 .tab-panel-enter-back {
   animation: tab-panel-enter-back 260ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+/* ---------- Done items ---------- */
+/* Checked-off packing items: the strike-through says "done", so the text
+   only dims to a level that still clears 4.5:1 (it was white/40, which
+   axe flagged). Unlayered, so it wins over the Tailwind colour utility on
+   the same element without touching the component. */
+.line-through {
+  color: color-mix(in oklch, var(--color-ink-100) 62%, transparent);
+  text-decoration-color: color-mix(in oklch, var(--color-ink-100) 45%, transparent);
 }
