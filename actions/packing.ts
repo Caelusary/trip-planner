@@ -53,6 +53,25 @@ export async function togglePackingItem(tripId: string, itemId: string, checked:
   revalidatePath(`/trips/${tripId}`);
 }
 
+export async function renamePackingItem(tripId: string, itemId: string, label: string) {
+  const supabase = await createClient();
+  const user = await requireUser(supabase);
+  requireUuid(tripId, "trip id");
+  requireUuid(itemId, "item id");
+  await requireTripOwnership(supabase, tripId, user.id);
+
+  const cleanLabel = requireText(label, "item");
+
+  const { error } = await supabase
+    .from("packing_items")
+    .update({ label: cleanLabel })
+    .eq("id", itemId)
+    .eq("trip_id", tripId);
+  if (error) throwSafeDbError(error, "rename this packing item");
+
+  revalidatePath(`/trips/${tripId}`);
+}
+
 export async function deletePackingItem(tripId: string, itemId: string) {
   const supabase = await createClient();
   const user = await requireUser(supabase);
