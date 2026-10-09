@@ -1,9 +1,27 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 import { getSupabaseEnv } from "@/lib/env";
+import { buildContentSecurityPolicy, createNonce } from "@/lib/csp";
 
 export async function proxy(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request });
+  // Per-request CSP nonce (production only, see lib/csp.ts). Next reads the
+  // policy off the *request* headers to know which nonce to stamp on its
+  // scripts, and the browser enforces the copy on the response.
+  const csp =
+    process.env.NODE_ENV === "production" ? buildContentSecurityPolicy(createNonce()) : null;
+
+  // Rebuilt on every call (not copied once up front) so cookies Supabase
+  // writes onto `request` in setAll below are carried through too.
+  const next = () => {
+    if (!csp) return NextResponse.next({ request });
+    const headers = new Headers(request.headers);
+    headers.set("Content-Security-Policy", csp);
+    const response = NextResponse.next({ request: { headers } });
+    response.headers.set("Content-Security-Policy", csp);
+    return response;
+  };
+
+  let supabaseResponse = next();
 
   const { url: supabaseUrl, anonKey } = getSupabaseEnv();
   const supabase = createServerClient(supabaseUrl, anonKey, {
@@ -15,7 +33,7 @@ export async function proxy(request: NextRequest) {
         cookiesToSet.forEach(({ name, value }) =>
           request.cookies.set(name, value),
         );
-        supabaseResponse = NextResponse.next({ request });
+        supabaseResponse = next();
         cookiesToSet.forEach(({ name, value, options }) =>
           supabaseResponse.cookies.set(name, value, options),
         );
