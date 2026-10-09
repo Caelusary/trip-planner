@@ -7,6 +7,7 @@ import { geocodeCity } from "@/lib/weather";
 import { MAX_NOTES_LENGTH, optionalDate, requireDate, requireText, requireUuid } from "@/lib/validation";
 import { requireTripOwnership, requireUser, throwSafeDbError } from "@/lib/tripAuth";
 import { isStopType, type StopType } from "@/lib/stopTypes";
+import { allAttractions } from "@/lib/attractions";
 
 const MAX_CONFIRMATION_NUMBER_LENGTH = 100;
 
@@ -189,6 +190,32 @@ export async function addAttractionToTrip(formData: FormData) {
 
   revalidatePath(`/trips/${tripId}`);
   revalidatePath("/trips/saved");
+}
+
+/**
+ * One-click "add this suggested activity as a stop" from the trip page's suggestions. Takes only
+ * the attraction's id and looks the city and name up server side, so a tampered request can only
+ * ever add a real curated attraction, never arbitrary text.
+ */
+export async function addSuggestedStop(tripId: string, attractionId: string) {
+  const supabase = await createClient();
+  const user = await requireUser(supabase);
+  requireUuid(tripId, "trip id");
+  const attraction = allAttractions().find((a) => a.id === attractionId);
+  if (!attraction) throw new Error("Invalid suggestion.");
+  await requireTripOwnership(supabase, tripId, user.id);
+
+  const { error } = await insertStop(supabase, tripId, {
+    city: attraction.city,
+    arrivalDate: null,
+    departureDate: null,
+    notes: attraction.name,
+    stopType: "activity",
+    confirmationNumber: null,
+  });
+  if (error) throwSafeDbError(error, "add this stop");
+
+  revalidatePath(`/trips/${tripId}`);
 }
 
 export async function deleteStop(tripId: string, stopId: string) {
