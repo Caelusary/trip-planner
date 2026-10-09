@@ -21,7 +21,7 @@ export function CategoryFilter({ value, onChange }: CategoryFilterProps) {
             type="button"
             onClick={() => onChange(option)}
             aria-pressed={active}
-            className={`min-h-9 rounded-full px-4 text-sm font-medium transition ${
+            className={`min-h-11 rounded-full px-4 text-sm font-medium transition ${
               active
                 ? "bg-accent-500 text-ink-950"
                 : "border border-white/15 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
