@@ -3,23 +3,40 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/supabase/user";
 import { fetchUpcomingTrips } from "@/lib/trips";
-import { TripCard, TripListSkeleton } from "@/components/TripCard";
+import { TripCard, TripListSkeleton, tripNights } from "@/components/TripCard";
 import { TabPanelTransition } from "@/components/TabPanelTransition";
+import { PageHeader } from "@/components/PageHeader";
+import { EmptyState } from "@/components/EmptyState";
 
 async function UpcomingTripsList({ userId }: { userId: string }) {
   const supabase = await createClient();
   const trips = await fetchUpcomingTrips(supabase, userId);
 
-  return trips.length ? (
-    <div className="stagger flex flex-col gap-4">
-      {trips.map((trip) => (
-        <TripCard key={trip.id} trip={trip} />
-      ))}
-    </div>
-  ) : (
-    <p className="glass-card p-6 text-sm text-white/70">
-      No trips yet — plan your first one on the trips page.
-    </p>
+  if (!trips.length) {
+    return (
+      <EmptyState
+        title="No departures scheduled"
+        body="Plan a trip with a destination and dates, then add stops, check the forecast and build a packing list. Not sure where yet? Browse attractions first."
+        actions={[
+          { href: "/trips/plan", label: "Plan a trip", primary: true },
+          { href: "/trips", label: "Browse attractions" },
+        ]}
+      />
+    );
+  }
+
+  const nights = trips.reduce((sum, trip) => sum + tripNights(trip.start_date, trip.end_date), 0);
+  return (
+    <section aria-label="Upcoming trips" className="flex flex-col gap-3">
+      <p className="ticket-label">
+        {trips.length} {trips.length === 1 ? "trip" : "trips"} · {nights} nights planned
+      </p>
+      <div className="stagger flex flex-col gap-4">
+        {trips.map((trip) => (
+          <TripCard key={trip.id} trip={trip} />
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -29,11 +46,12 @@ export default async function UpcomingTripsPage() {
 
   return (
     <TabPanelTransition>
-      <div className="mx-auto flex max-w-5xl flex-col gap-6 pt-4">
-        {/* No "back to trips" / "plan a trip" links here — both are now
-            tabs in the top nav (see components/TopNav.tsx) rather than
-            page-local links, so this page doesn't need its own copies. */}
-        <h1 className="font-display text-lg font-semibold">Upcoming trips</h1>
+      <div className="mx-auto flex max-w-5xl flex-col gap-8">
+        <PageHeader
+          title="Upcoming trips"
+          meta="Your next departures, soonest first."
+          action={{ href: "/trips/plan", label: "Plan a trip" }}
+        />
         <Suspense fallback={<TripListSkeleton />}>
           <UpcomingTripsList userId={user.id} />
         </Suspense>
