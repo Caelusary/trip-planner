@@ -44,3 +44,7 @@ dev.cmd
 
 # JetBrains IDE
 .idea/
+
+# playwright
+/playwright-report/
+/test-results/
