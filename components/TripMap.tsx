@@ -73,7 +73,7 @@ export function TripMap({ points }: TripMapProps) {
   if (points.length === 0) {
     return (
       <p className="text-sm text-white/70">
-        No locations to show yet — stops need a recognized city before they can be plotted.
+        No locations to show yet. Stops need a recognized city before they can be plotted.
       </p>
     );
   }
