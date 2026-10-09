@@ -476,3 +476,16 @@ button:focus-visible {
   color: color-mix(in oklch, var(--color-ink-100) 62%, transparent);
   text-decoration-color: color-mix(in oklch, var(--color-ink-100) 45%, transparent);
 }
+
+/* ---------- Share popover ---------- */
+/* Native [popover] renders in the top layer, centred by the browser. Reset the UA border and
+   colours so glass-card's own surface shows, and dim the page behind it. */
+.share-popover {
+  margin: auto;
+  border: 0;
+  color: inherit;
+  background-color: var(--color-ink-900);
+}
+.share-popover::backdrop {
+  background: color-mix(in oklch, black 45%, transparent);
+}
